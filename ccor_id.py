@@ -1,20 +1,17 @@
-from .utils.retrieve_data import load_planetary_data, load_star_data, load_comet_data
+from collections import defaultdict
+
+from .utils.retrieve_data import load_planetary_data, load_star_data, load_comet_data, subset_star_data
 from .utils.io import read_input, write_output
 from .utils.coordinate_transformations import (
     get_ccor_locations,
     get_ccor_locations_sunpy,
     get_comet_locations,
     get_star_names,
+    get_ccor_observer,
 )
 
 import os
-
-from astropy.wcs import WCS
-from astropy.time import Time
-from sunpy import map as smap
-
 from skyfield.api import Star, load
-import skyfield.api as sf
 
 
 def run_alg(inputs):
@@ -47,59 +44,27 @@ def run_alg(inputs):
     marker_size = (0.5 + limiting_magnitude - magnitude) ** 2.0
 
     # Define the observer (approximate from GEO location for G19):
-    observer_latitude = 0
-    observer_longitude = 75.2
-    observer = earth + sf.wgs84.latlon(observer_latitude, observer_longitude)  # Define observer location
+    observer = get_ccor_observer(earth)
 
     # For now, just initialize empty lists - will look into a
     # more effective solution later (maybe dict-like object)
-    data = []
-    all_comets = []
-    all_valid_pixels = []
-    all_stars = []
-    all_marker_sizes = []
-    all_moon_pixels = []
-    all_merc_pixels = []
-    all_venus_pixels = []
-    all_jupiter_pixels = []
-    all_saturn_pixels = []
-    all_mars_pixels = []
-    all_neptune_pixels = []
-    all_uranus_pixels = []
-    all_star_ids = []
-    all_star_names = []
-    date_obs = []
+    star_dict = defaultdict(list)
+    planet_dict = defaultdict(list)
+    data_dict = defaultdict(list)
+    comet_dict = defaultdict(list)
+
     for f in inputs[:1]:  # 10]:
         print(f"Identifying objects for file: {os.path.basename(f)}")
-        data, header = read_input(f)
-
-        # Define the WCS for the Celestial Coordinate system
-        wcs = WCS(header, key="A")
-
-        # For transformations relative to CCOR's coordinate system
-        ccor_map = smap.Map(data, header, key="A")
-
-        # Set the observation time (assuming you can get this from the FITS header)
-        observation_time = header["DATE-OBS"]
-        t = ts.from_astropy(Time(observation_time))
+        data, wcs, ccor_map, t, observation_time = read_input(f, ts)
 
         # FOR STARS:
         # -----------
         s_x, s_y, s_distance = get_ccor_locations(observer, t, wcs, star_data)
-        # Divide by two for plotting of L3 data
-        good_sx = s_x[bright_stars]
-        good_sy = s_y[bright_stars]
         # Now subset to the field of view only:
-        star_mask = (
-            (good_sx * 2 <= 2048) & (good_sx > 0) & (good_sy * 2 <= 1920) & (good_sy > 0)
-        )  # multiply by two so they are found within original image bounds
-        good_sx_sub = good_sx[star_mask]
-        good_sy_sub = good_sy[star_mask]
-        good_markers_sub = marker_size[star_mask]
-        good_star_ids = s_id[bright_stars][star_mask]
-
-        # STAR NAMES:
-        # ---------
+        good_sx_sub, good_sy_sub, good_markers_sub, good_star_ids = subset_star_data(
+            s_x, s_y, bright_stars, marker_size, s_id
+        )
+        # Get the star names from their ids:
         good_star_names = get_star_names(good_star_ids)
 
         # FOR PLANETS/Moon:
@@ -111,42 +76,32 @@ def run_alg(inputs):
         valid_pixels, get_comet, get_distance = get_comet_locations(comets, sun, ts, observer, t, wcs)
 
         # Append the data
-        all_comets.append(get_comet)
-        all_valid_pixels.append(valid_pixels)
-        all_stars.append((good_sx_sub, good_sy_sub))
-        all_marker_sizes.append(good_markers_sub)
-        all_star_ids.append(good_star_ids)
-        all_star_names.append(good_star_names)
+        comet_dict["comets"].append(get_comet)
+        comet_dict["comet_locs"].append(valid_pixels)
+
+        # Stars:
+        star_dict["stars"].append((good_sx_sub, good_sy_sub))
+        star_dict["star_markers"].append(good_markers_sub)
+        star_dict["star_ids"].append(good_star_ids)
+        star_dict["star_names"].append(good_star_names)
 
         # Planetary
-        all_moon_pixels.append(planet_locations["moon"])
-        all_merc_pixels.append(planet_locations["mercury"])
-        all_venus_pixels.append(planet_locations["venus"])
-        all_jupiter_pixels.append(planet_locations["jupiter"])
-        all_saturn_pixels.append(planet_locations["saturn"])
-        all_mars_pixels.append(planet_locations["mars"])
-        all_neptune_pixels.append(planet_locations["neptune"])
-        all_uranus_pixels.append(planet_locations["uranus"])
-        data.append(data)
-        date_obs.append(observation_time)
+        keys = ["mercury", "venus", "moon", "mars", "jupiter", "saturn", "uranus", "neptune"]
+        for k in keys:
+            planet_dict[k].append(planet_locations[k])
+
+        # Data:
+        data_dict["data"].append(data)
+        data_dict["date_obs"].append(observation_time)
 
     # Now output the data:
     write_output(
         inputs,
-        date_obs,
-        all_comets,
-        all_valid_pixels,
-        all_moon_pixels,
-        all_merc_pixels,
-        all_venus_pixels,
-        all_mars_pixels,
-        all_jupiter_pixels,
-        all_saturn_pixels,
-        all_neptune_pixels,
-        all_uranus_pixels,
-        all_stars,
+        planet_dict,
+        star_dict,
+        data_dict,
+        comet_dict,
         get_star_names,
-        all_star_ids,
     )
 
     # Plot if desired:
