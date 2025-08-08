@@ -1,15 +1,24 @@
-from astropy.io import fits
 import json
 import os
 import datetime
 
+from astropy.io import fits
+from astropy.wcs import WCS
+from astropy.time import Time
+from sunpy import map as smap
 
-def read_input(input):
+
+def read_input(input, ts):
     """Read fits file and return data and header"""
     with fits.open(input) as hdul:
         header = hdul[1].header
         data = hdul[1].header
-    return (header, data)
+        wcs = WCS(header, key="A")
+        ccor_map = smap.Map(data, header, key="A")
+        obs_time = header["DATE-OBS"]
+        time = ts.from_astropy(Time(obs_time))
+
+    return (data, wcs, ccor_map, time, obs_time)
 
 
 def write_output(
