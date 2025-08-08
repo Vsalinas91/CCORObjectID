@@ -4,6 +4,7 @@ from astropy.time import Time
 from skyfield.constants import GM_SUN_Pitjeva_2005_km3_s2 as GM_SUN
 from skyfield.data import mpc
 from skyfield.named_stars import named_star_dict
+import skyfield.api as sf
 
 
 def get_ccor_locations(observer, observation_time, wcs, objects):
@@ -81,3 +82,12 @@ def hip_id_to_star_name(star_id):
     Converts a Hipparcos (HIP) ID to a star name.
     """
     return [name for name, hip_id in named_star_dict.items() if star_id == hip_id]
+
+
+def get_ccor_observer(earth):
+    """
+    Define the observer location to do the coordinate transformations.
+    """
+    observer_latitude = 0
+    observer_longitude = 75.2
+    return earth + sf.wgs84latlon(observer_latitude, observer_longitude)
