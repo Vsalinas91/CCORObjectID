@@ -6,7 +6,7 @@ def load_planetary_data():
     """
     Load in planetary ephemeris data.
     """
-    ephemeris = load("de421.bsp")
+    ephemeris = load("/Users/vicente.salinas/Desktop/CCORObjectID/ccor_object_identification/static_required/de421.bsp")
     return (ephemeris["earth"], ephemeris["sun"])
 
 
