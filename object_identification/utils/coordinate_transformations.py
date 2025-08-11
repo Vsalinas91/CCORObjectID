@@ -34,7 +34,7 @@ def get_ccor_locations_sunpy(ccor_map, observation_time, wcs):
         body = get_body(key, time=Time(observation_time), location=el)
         body_skycoord = SkyCoord(body.ra, body.dec, frame="icrs", unit="deg")
         body_pixel_x, body_pixel_y = wcs.world_to_pixel(body_skycoord)
-        planet_dict[key] = (body_pixel_x / 2, body_pixel_y / 2)
+        planet_dict[key] = (float(body_pixel_x) / 2, float(body_pixel_y) / 2)
 
     return planet_dict
 
