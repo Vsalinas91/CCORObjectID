@@ -90,4 +90,4 @@ def get_ccor_observer(earth):
     """
     observer_latitude = 0
     observer_longitude = 75.2
-    return earth + sf.wgs84latlon(observer_latitude, observer_longitude)
+    return earth + sf.wgs84.latlon(observer_latitude, observer_longitude)
