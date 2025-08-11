@@ -6,11 +6,16 @@ from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.time import Time
 from sunpy import map as smap
+from pathlib import Path
 
 from dataclasses import dataclass
 from typing import Any
 import numpy.typing as npt
 from skyfield.timelib import Timescale
+
+from .exceptions import CCORExitError
+
+ROOT_DIR = Path(__file__).parent.parent.parent
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -20,6 +25,7 @@ class GetData:
     ccor_map: smap.GenericMap
     time: Timescale
     obs_time: str
+    end_time: str
 
 
 def read_input(input: str, ts: Timescale) -> GetData:
@@ -30,73 +36,33 @@ def read_input(input: str, ts: Timescale) -> GetData:
         wcs = WCS(header, key="A")
         ccor_map = smap.Map(data, header, key="A")
         obs_time = header["DATE-OBS"]
+        end_time = header["DATE-END"]
         time = ts.from_astropy(Time(obs_time))
 
-    return GetData(image_data=data, WCS=wcs, ccor_map=ccor_map, time=time, obs_time=obs_time)
+    return GetData(image_data=data, WCS=wcs, ccor_map=ccor_map, time=time, obs_time=obs_time, end_time=end_time)
 
 
-def write_output(
-    inputs,
-    date_obs,
-    all_comets,
-    all_valid_pixels,
-    all_moon_pixels,
-    all_merc_pixels,
-    all_venus_pixels,
-    all_mars_pixels,
-    all_jupiter_pixels,
-    all_saturn_pixels,
-    all_neptune_pixels,
-    all_uranus_pixels,
-    all_stars,
-    get_star_names,
-    all_star_ids,
-):
-    for i in range(len(date_obs)):
-        file_name = os.path.basename(inputs[i])
-        date = file_name.split("_")
-        file_tstamp = "_".join([date[3], date[4]])
-        creation = datetime.datetime.now().strftime("p%Y%m%dT%H%M%SZ")
+def write_output(obs_time: str, end_time: str, data_dict: dict[str, Any]) -> None:
+    """
+    write out the data to a file that matches the data product cadence timestamp.
+    """
+    obs_time_fmt = obs_time.replace("-", "").replace(":", "").split(".")[0]
+    end_time_fmt = end_time.replace("-", "").replace(":", "").split(".")[0]
+    file_tstamp = f"s{obs_time_fmt}Z_e{end_time_fmt}Z"
+    out_dir = f"{obs_time_fmt.split('T')[0]}"
+    creation = datetime.datetime.now().strftime("p%Y%m%dT%H%M%SZ")
 
-        artifact_df = {}
-        artifact_df["parent_file"] = file_name
-        artifact_df["info"] = (
-            "Values are in units pixels and reflect the locations at the L3 product level - "
-            + "must scale locations by a factor of 2 for plotting over L1a-L2 products."
-        )
-        artifact_df["obs_time"] = date_obs[i]
-        artifact_df["comet_name"] = all_comets[i][0] if len(all_comets[i]) > 0 else None
-        artifact_df["comet_pos_x"] = all_valid_pixels[i][0][0] if len(all_valid_pixels[i]) > 0 else None
-        artifact_df["comet_pos_y"] = all_valid_pixels[i][0][1] if len(all_valid_pixels[i]) > 0 else None
-        artifact_df["moon_pos_x"] = all_moon_pixels[i][0]
-        artifact_df["moon_pos_y"] = all_moon_pixels[i][1]
-        artifact_df["mercury_pos_x"] = all_merc_pixels[i][0]
-        artifact_df["mercury_pos_y"] = all_merc_pixels[i][1]
-        artifact_df["venus_pos_x"] = all_venus_pixels[i][0]
-        artifact_df["venus_pos_y"] = all_venus_pixels[i][1]
-        artifact_df["mars_pos_x"] = all_mars_pixels[i][0]
-        artifact_df["mars_pos_y"] = all_mars_pixels[i][1]
-        artifact_df["jupiter_pos_x"] = all_jupiter_pixels[i][0]
-        artifact_df["jupiter_pos_y"] = all_jupiter_pixels[i][1]
-        artifact_df["saturn_pos_x"] = all_saturn_pixels[i][0]
-        artifact_df["saturn_pos_y"] = all_saturn_pixels[i][1]
-        artifact_df["neptune_pos_x"] = all_neptune_pixels[i][0]
-        artifact_df["neptune_pos_y"] = all_neptune_pixels[i][1]
-        artifact_df["uranus_pos_x"] = all_uranus_pixels[i][0]
-        artifact_df["uranus_pos_y"] = all_uranus_pixels[i][1]
-        artifact_df["stars_x"] = all_stars[i][0].tolist()
-        artifact_df["stars_y"] = all_stars[i][1].tolist()
-        artifact_df["star_names"] = get_star_names[i]
-        artifact_df["star_hip_id"] = all_star_ids[i]
+    # Create output directory if it does  not exist:
+    try:
+        os.makedirs(os.path.join(ROOT_DIR, f"outputs/{out_dir}"), exist_ok=True)
+    except OSError as e:
+        print(f"Error creating data directory: {str(e)}")
 
-        try:
-
-            with open(
-                "/Users/vicente.salinas/Desktop/CCOR_Testing/test_object_identification/ccor1-id/2024-10-27-comet/"
-                + f"sci_ccor1-obj_g19_{file_tstamp}_{creation}_pub.json",
-                "w",
-            ) as data_file:
-                json.dump(artifact_df, data_file, indent=4)
-        except TypeError:
-            print("No data to output...skipping file")
-            pass
+    try:
+        with open(
+            os.path.join(ROOT_DIR, f"outputs/{out_dir}/sci_ccor1-obj_g19_{file_tstamp}_{creation}_pub.json"),
+            "w",
+        ) as data_file:
+            json.dump(data_dict, data_file, indent=4)
+    except TypeError:
+        raise CCORExitError("No data to output...skipping file")
