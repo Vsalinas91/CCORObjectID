@@ -7,8 +7,22 @@ from astropy.wcs import WCS
 from astropy.time import Time
 from sunpy import map as smap
 
+from dataclasses import dataclass
+from typing import Any
+import numpy.typing as npt
+from skyfield.timelib import Timescale
 
-def read_input(input, ts):
+
+@dataclass(frozen=True, kw_only=True)
+class GetData:
+    image_data: npt.NDArray[Any]
+    WCS: WCS
+    ccor_map: smap.GenericMap
+    time: Timescale
+    obs_time: str
+
+
+def read_input(input: str, ts: Timescale) -> GetData:
     """Read fits file and return data and header"""
     with fits.open(input) as hdul:
         header = hdul[1].header
@@ -18,7 +32,7 @@ def read_input(input, ts):
         obs_time = header["DATE-OBS"]
         time = ts.from_astropy(Time(obs_time))
 
-    return (data, wcs, ccor_map, time, obs_time)
+    return GetData(image_data=data, WCS=wcs, ccor_map=ccor_map, time=time, obs_time=obs_time)
 
 
 def write_output(

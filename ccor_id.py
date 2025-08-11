@@ -55,7 +55,12 @@ def run_alg(inputs):
 
     for f in inputs[:1]:  # 10]:
         print(f"Identifying objects for file: {os.path.basename(f)}")
-        data, wcs, ccor_map, t, observation_time = read_input(f, ts)
+        get_input_data = read_input(f, ts)
+        data = get_input_data.image_data
+        wcs = get_input_data.WCS
+        ccor_map = get_input_data.ccor_map
+        t = get_input_data.time
+        observation_time = get_input_data.obs_time
 
         # FOR STARS:
         # -----------
