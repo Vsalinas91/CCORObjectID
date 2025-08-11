@@ -26,7 +26,7 @@ def read_input(input: str, ts: Timescale) -> GetData:
     """Read fits file and return data and header"""
     with fits.open(input) as hdul:
         header = hdul[1].header
-        data = hdul[1].header
+        data = hdul[1].data
         wcs = WCS(header, key="A")
         ccor_map = smap.Map(data, header, key="A")
         obs_time = header["DATE-OBS"]
