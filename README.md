@@ -20,6 +20,7 @@ The table below summarizes the objects that can currently be identified by the a
 | Major Constellations |:heavy_check_mark:|
 | Major Stars| :heavy_check_mark:|
 | Comets    |:heavy_check_mark:|
+| Satellites| :x:              |
 
 ## Future Work
 
