@@ -1,9 +1,13 @@
-from skyfield.api import load, Star
+from skyfield.api import load, Star, load_file
 from skyfield.data import hipparcos, mpc, stellarium
+import os
 
 from dataclasses import dataclass
 from typing import Any
 import numpy.typing as npt
+from pathlib import Path
+
+CURRENT_DIR = Path(__file__).parent.parent
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -27,7 +31,7 @@ def load_planetary_data():
     """
     Load in planetary ephemeris data.
     """
-    ephemeris = load("/Users/vicente.salinas/Desktop/CCORObjectID/ccor_object_identification/static_required/de421.bsp")
+    ephemeris = load_file(os.path.join(CURRENT_DIR, "static_required/de421.bsp"))
     return (ephemeris["earth"], ephemeris["sun"])
 
 
@@ -36,7 +40,7 @@ def load_star_data():
     Load the Hipparcos start catalogue data.
     """
     try:
-        with load.open(hipparcos.URL) as f:
+        with load.open(os.path.join(CURRENT_DIR, "static_required/hip_main.dat")) as f:
             return hipparcos.load_dataframe(f)
     except Exception:
         print("Could not load star catalogue - try different source.")
@@ -92,7 +96,7 @@ def load_comet_data():
     Load the comet data.
     """
     try:
-        with load.open(mpc.COMET_URL) as f:
+        with load.open(os.path.join(CURRENT_DIR, "static_required/CometEls.txt")) as f:
             comets = mpc.load_comets_dataframe(f)
             # Resort the dataframe:
             return (
