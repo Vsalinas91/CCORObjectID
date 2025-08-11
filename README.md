@@ -32,3 +32,12 @@ This code is still under active delopement with the following items as potential
  * Provide image/animation examples
  * Determine importance of location accuracy for this as a reference product
  * More TBD
+
+## Examples: 
+Constellation(s):
+<img width="1660" height="644" alt="ccor1-l3-frame-078" src="https://github.com/user-attachments/assets/ce221abc-f26d-4cb5-916e-516b4d6d0723" />
+
+Planet(s) and Moon:
+<img width="1660" height="644" alt="ccor1-l3-frame-042" src="https://github.com/user-attachments/assets/f03eab4b-4653-4780-ac9e-835a5ed73851" />
+
+
