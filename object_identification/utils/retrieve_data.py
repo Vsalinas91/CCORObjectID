@@ -114,8 +114,6 @@ def load_constellation_data():
     """
     Load the constellation data - major constellations.
     """
-    const_url = (
-        "/Users/vicente.salinas/Desktop/CCORObjectID/ccor_object_identification/static_required/constellationship.fab"
-    )
+    const_url = os.path.join(CURRENT_DIR, "static_required/constellationship.fab")
     with load.open(const_url) as f:
         return stellarium.parse_constellations(f)
