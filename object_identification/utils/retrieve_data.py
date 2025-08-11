@@ -1,6 +1,18 @@
 from skyfield.api import load
 from skyfield.data import hipparcos, mpc, stellarium
 
+from dataclasses import dataclass
+from typing import Any
+import numpy.typing as npt
+
+
+@dataclass(frozen=True, kw_only=True)
+class GetStarsSubset:
+    stars_x: npt.NDArray[Any]
+    stars_y: npt.NDArray[Any]
+    markers: npt.NDArray[Any]
+    stars_ids: npt.NDArray[Any]
+
 
 def load_planetary_data():
     """
@@ -22,7 +34,15 @@ def load_star_data():
         return None
 
 
-def subset_star_data(s_x, s_y, bright_stars, marker_size, s_id, nx=2048, ny=1920):
+def subset_star_data(
+    s_x: npt.NDArray[Any],
+    s_y: npt.NDArray[Any],
+    bright_stars: npt.NDArray[Any],
+    marker_size: npt.NDArray[Any],
+    s_id: npt.NDArray[Any],
+    nx: int = 2048,
+    ny: int = 1920,
+) -> GetStarsSubset:
     """
     Subset the star catalogue to the CCOR FOV.
     """
@@ -37,7 +57,7 @@ def subset_star_data(s_x, s_y, bright_stars, marker_size, s_id, nx=2048, ny=1920
     good_markers_sub = marker_size[fov_mask]
     good_star_ids = s_id[bright_stars][fov_mask]
 
-    return (good_sx_sub, good_sy_sub, good_markers_sub, good_star_ids)
+    return GetStarsSubset(stars_x=good_sx_sub, stars_y=good_sy_sub, markers=good_markers_sub, stars_ids=good_star_ids)
 
 
 def load_comet_data():

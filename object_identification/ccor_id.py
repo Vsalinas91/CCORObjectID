@@ -66,9 +66,11 @@ def run_alg(inputs):
         # -----------
         s_x, s_y, s_distance = get_ccor_locations(observer, t, wcs, star_data)
         # Now subset to the field of view only:
-        good_sx_sub, good_sy_sub, good_markers_sub, good_star_ids = subset_star_data(
-            s_x, s_y, bright_stars, marker_size, s_id
-        )
+        star_data = subset_star_data(s_x, s_y, bright_stars, marker_size, s_id)
+        good_sx_sub = star_data.stars_x
+        good_sy_sub = star_data.stars_y
+        good_markers_sub = star_data.markers
+        good_star_ids = star_data.stars_ids
         # Get the star names from their ids:
         good_star_names = get_star_names(good_star_ids)
 
