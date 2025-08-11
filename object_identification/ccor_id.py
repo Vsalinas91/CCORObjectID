@@ -1,6 +1,12 @@
 from collections import defaultdict
 
-from .utils.retrieve_data import load_planetary_data, load_star_data, load_comet_data, subset_star_data
+from .utils.retrieve_data import (
+    load_planetary_data,
+    load_star_data,
+    load_comet_data,
+    subset_star_data,
+    get_star_magnitude_mask,
+)
 from .utils.io import read_input, write_output
 from .utils.coordinate_transformations import (
     get_ccor_locations,
@@ -11,7 +17,7 @@ from .utils.coordinate_transformations import (
 )
 
 import os
-from skyfield.api import Star, load
+from skyfield.api import load
 
 
 def run_alg(inputs):
@@ -37,11 +43,10 @@ def run_alg(inputs):
     s_id = stars.index
 
     # Format stars dataframe and define filter for getting only brightest stars:
-    star_data = Star.from_dataframe(stars)
-    limiting_magnitude = 7.0
-    bright_stars = stars.magnitude <= limiting_magnitude * 2.5  # 1.5 for best effect
-    magnitude = stars["magnitude"][bright_stars]
-    marker_size = (0.5 + limiting_magnitude - magnitude) ** 2.0
+    get_star_magnitudes = get_star_magnitude_mask(stars)
+    star_data = get_star_magnitudes.star_data
+    bright_stars = get_star_magnitudes.bright_stars
+    marker_size = get_star_magnitudes.marker_size
 
     # Define the observer (approximate from GEO location for G19):
     observer = get_ccor_observer(earth)

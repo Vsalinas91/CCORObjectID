@@ -1,4 +1,4 @@
-from skyfield.api import load
+from skyfield.api import load, Star
 from skyfield.data import hipparcos, mpc, stellarium
 
 from dataclasses import dataclass
@@ -12,6 +12,15 @@ class GetStarsSubset:
     stars_y: npt.NDArray[Any]
     markers: npt.NDArray[Any]
     stars_ids: npt.NDArray[Any]
+
+
+@dataclass(frozen=True, kw_only=True)
+class GetStarMags:
+    star_data: npt.NDArray[Any]
+    limiting_magnitude: float
+    bright_stars: npt.NDArray[Any]
+    magnitude: npt.NDArray[Any]
+    marker_size: npt.NDArray[Any]
 
 
 def load_planetary_data():
@@ -32,6 +41,24 @@ def load_star_data():
     except Exception:
         print("Could not load star catalogue - try different source.")
         return None
+
+
+def get_star_magnitude_mask(stars, limiting_magnitude=7.0) -> GetStarMags:
+    """
+    Get a subset of the star catalogue based on the magnitude (limiting_magnitude)
+    and give resulting marker sizes based on brightness for plotting.
+    """
+    star_data = Star.from_dataframe(stars)
+    bright_stars = stars.magnitude <= limiting_magnitude * 2.5  # 1.5 for best affect
+    magnitude = stars["magnitude"][bright_stars]
+    marker_size = (0.5 + limiting_magnitude - magnitude) ** 2.0
+    return GetStarMags(
+        star_data=star_data,
+        bright_stars=bright_stars,
+        limiting_magnitude=limiting_magnitude,
+        magnitude=magnitude,
+        marker_size=marker_size,
+    )
 
 
 def subset_star_data(
