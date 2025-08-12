@@ -18,9 +18,12 @@ from .utils.exceptions import CCORExitError
 import os
 from skyfield.api import load
 from pathlib import Path
+from typing import Any
+import numpy as np
+import numpy.typing as npt
 
 
-def run_alg(inputs):
+def run_alg(inputs: list[Any]) -> None:
     """
     Process CCOR L3 data to identify celestial objects within it's field of view (FOV).
 
@@ -37,12 +40,15 @@ def run_alg(inputs):
     ts = load.timescale()
 
     # Define the ephemeris data:
-    earth, sun = load_planetary_data()
+    reference_bodies = load_planetary_data()
+    earth = reference_bodies.earth
+    sun = reference_bodies.sun
     stars = load_star_data()
     comets = load_comet_data()
-    s_id = stars.index
+    s_id: npt.NDArray[Any] = np.array(stars.index)
 
     # Format stars dataframe and define filter for getting only brightest stars:
+    # Todo: handle this in retrieve_data.py
     get_star_magnitudes = get_star_magnitude_mask(stars)
     star_data = get_star_magnitudes.star_data
     bright_stars = get_star_magnitudes.bright_stars
@@ -70,13 +76,15 @@ def run_alg(inputs):
 
         # FOR STARS:
         # -----------
-        s_x, s_y, s_distance = get_ccor_locations(observer, t, wcs, star_data)
+        star_locations = get_ccor_locations(observer, t, wcs, star_data)
+        s_x = star_locations.s_x
+        s_y = star_locations.s_y
         # Now subset to the field of view only:
-        star_data = subset_star_data(s_x, s_y, bright_stars, marker_size, s_id)
-        good_sx_sub = star_data.stars_x
-        good_sy_sub = star_data.stars_y
-        good_markers_sub = star_data.markers
-        good_star_ids = star_data.stars_ids
+        star_object = subset_star_data(s_x, s_y, bright_stars, marker_size, s_id)
+        good_sx_sub = star_object.stars_x
+        good_sy_sub = star_object.stars_y
+        good_markers_sub = star_object.markers
+        good_star_ids = star_object.stars_ids
         # Get the star names from their ids:
         good_star_names = get_star_names(good_star_ids)
 
@@ -94,9 +102,9 @@ def run_alg(inputs):
 
         # Stars:
         star_dict["stars"] = (good_sx_sub, good_sy_sub)
-        star_dict["star_markers"] = good_markers_sub.values.tolist()
-        star_dict["star_ids"] = good_star_ids.values.tolist()
-        star_dict["star_names"] = good_star_names
+        star_dict["star_markers"] = good_markers_sub.tolist()
+        star_dict["star_ids"] = good_star_ids.tolist()
+        star_dict["star_names"] = np.array(good_star_names).tolist()
 
         # Planetary
         keys = ["mercury", "venus", "moon", "mars", "jupiter", "saturn", "uranus", "neptune"]

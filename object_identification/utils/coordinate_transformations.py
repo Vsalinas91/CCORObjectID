@@ -6,8 +6,26 @@ from skyfield.data import mpc
 from skyfield.named_stars import named_star_dict
 import skyfield.api as sf
 
+from typing import Any
+import numpy.typing as npt
+from skyfield.vectorlib import VectorFunction
+from astropy.wcs.wcs import WCS
+from sunpy.map.mapbase import GenericMap
+from pandas import DataFrame
+from skyfield.timelib import Timescale
+from dataclasses import dataclass
 
-def get_ccor_locations(observer, observation_time, wcs, objects):
+
+@dataclass(frozen=True, kw_only=True)
+class ObjectLocations:
+    s_x: npt.NDArray[Any]
+    s_y: npt.NDArray[Any]
+    object_distance: npt.NDArray[Any]
+
+
+def get_ccor_locations(
+    observer: VectorFunction, observation_time: str, wcs: WCS, objects: npt.NDArray[Any]
+) -> ObjectLocations:
     """
     Get the pixel locations of the objects relative to CCOR's
     WCS.
@@ -17,10 +35,10 @@ def get_ccor_locations(observer, observation_time, wcs, objects):
     # Get the angular positions for converting to the WCS CCOR pixel world
     obj_ra, obj_dec, obj_distance = object_positions.radec()
     obj_x, obj_y = wcs.all_world2pix(obj_ra.degrees, obj_dec.degrees, 1)  # 1 for origin at 1
-    return (obj_x / 2, obj_y / 2, obj_distance)
+    return ObjectLocations(s_x=obj_x / 2, s_y=obj_y / 2, object_distance=obj_distance)
 
 
-def get_ccor_locations_sunpy(ccor_map, observation_time, wcs):
+def get_ccor_locations_sunpy(ccor_map: GenericMap, observation_time: str, wcs: WCS) -> dict[str, Any | None]:
     """
     Get the pixel locations for planetary bodies using SunPy's Map object
     """
@@ -39,7 +57,9 @@ def get_ccor_locations_sunpy(ccor_map, observation_time, wcs):
     return planet_dict
 
 
-def get_comet_locations(comets, sun, ts, observer, observation_time, wcs):
+def get_comet_locations(
+    comets: DataFrame, sun: VectorFunction, ts: Timescale, observer: VectorFunction, observation_time: str, wcs: WCS
+):
     """
     Get the comet pixel locations relative to CCOR's WCS and observation time.
     """
@@ -66,7 +86,7 @@ def get_comet_locations(comets, sun, ts, observer, observation_time, wcs):
     return (get_comet, get_distance, valid_pixels)
 
 
-def get_star_names(star_ids):
+def get_star_names(star_ids: list[int | float] | npt.NDArray[Any]) -> list[list[str]]:
     """
     From the star data, get the name corresponding to the catalogue ID (HIP ID)
     """
@@ -77,14 +97,14 @@ def get_star_names(star_ids):
     return get_names
 
 
-def hip_id_to_star_name(star_id):
+def hip_id_to_star_name(star_id: int | float) -> list[str]:
     """
     Converts a Hipparcos (HIP) ID to a star name.
     """
     return [name for name, hip_id in named_star_dict.items() if star_id == hip_id]
 
 
-def get_ccor_observer(earth):
+def get_ccor_observer(earth: VectorFunction) -> VectorFunction:
     """
     Define the observer location to do the coordinate transformations.
     """
