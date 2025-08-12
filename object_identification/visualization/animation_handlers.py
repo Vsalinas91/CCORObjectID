@@ -6,7 +6,7 @@ import glob
 GifImagePlugin.LOADING_STRATEGY = GifImagePlugin.LoadingStrategy.RGB_AFTER_DIFFERENT_PALETTE_ONLY
 
 
-def convertToP(im):
+def convertToP(im: Image.Image) -> Image.Image:
     """
     Ensure quality of gif is same as images.
     src: https://github.com/python-pillow/Pillow/issues/6832
@@ -18,19 +18,19 @@ def convertToP(im):
         for x in range(im.width):
             for y in range(im.height):
                 pixel = im.getpixel((x, y))
-                if pixel[3] == 0:
+                if pixel[3] == 0:  # type: ignore
                     transparent_pixels.append((x, y))
                 else:
-                    color = p.palette.getcolor(pixel[:3])
+                    color = p.palette.getcolor(pixel[:3])  # type: ignore
                     p.putpixel((x, y), color)
-        if transparent_pixels and len(p.palette.colors) < 256:
+        if transparent_pixels and len(p.palette.colors) < 256:  # type: ignore
             color = (0, 0, 0)
-            while color in p.palette.colors:
+            while color in p.palette.colors:  # type: ignore
                 if color[0] < 255:
                     color = (color[0] + 1, color[1], color[2])
                 else:
                     color = (color[0], color[1] + 1, color[2])
-            transparency = p.palette.getcolor(color)
+            transparency = p.palette.getcolor(color)  # type: ignore
             p.info["transparency"] = transparency
             for x, y in transparent_pixels:
                 p.putpixel((x, y), transparency)
@@ -38,7 +38,7 @@ def convertToP(im):
     return im.convert("P", palette=Image.Palette.ADAPTIVE)
 
 
-def save_animation(path):
+def save_animation(path: str) -> None:
     fp_in = f"{path}/*.png"
     fp_out = f"{path}/ccor1.gif"
 
