@@ -104,7 +104,7 @@ def run_alg(inputs: list[Any]) -> None:
         star_dict["stars"] = (good_sx_sub, good_sy_sub)
         star_dict["star_markers"] = good_markers_sub.tolist()
         star_dict["star_ids"] = good_star_ids.tolist()
-        star_dict["star_names"] = np.array(good_star_names).tolist()
+        star_dict["star_names"] = np.array(good_star_names, dtype=object).tolist()
 
         # Planetary
         keys = ["mercury", "venus", "moon", "mars", "jupiter", "saturn", "uranus", "neptune"]
