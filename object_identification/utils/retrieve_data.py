@@ -37,6 +37,13 @@ class GetReferenceBodies:
     sun: VectorFunction
 
 
+@dataclass(frozen=True, kw_only=True)
+class Stars4Plotting:
+    full_star_x: list[Any]
+    full_star_y: list[Any]
+    full_star_id: list[Any]
+
+
 def load_planetary_data() -> GetReferenceBodies:
     """
     Load in planetary ephemeris data.
@@ -102,7 +109,7 @@ def subset_star_data(
     return GetStarsSubset(stars_x=good_sx_sub, stars_y=good_sy_sub, markers=good_markers_sub, stars_ids=good_star_ids)
 
 
-def complete_star_data_for_plotting(input_file_list):
+def complete_star_data_for_plotting(input_file_list: list[Any]) -> Stars4Plotting:
     """
     This routine is for obtaining ALL stars when plotting so that
     the constellations can be drawn.
@@ -153,6 +160,8 @@ def complete_star_data_for_plotting(input_file_list):
             full_star_x.append(s_x / 2)
             full_star_y.append(s_y / 2)
             full_star_id.append(s_id)
+
+    return Stars4Plotting(full_star_x=full_star_x, full_star_y=full_star_y, full_star_id=full_star_id)
 
 
 def load_comet_data() -> pd.DataFrame | None:
