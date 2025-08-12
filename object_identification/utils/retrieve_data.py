@@ -102,6 +102,59 @@ def subset_star_data(
     return GetStarsSubset(stars_x=good_sx_sub, stars_y=good_sy_sub, markers=good_markers_sub, stars_ids=good_star_ids)
 
 
+def complete_star_data_for_plotting(input_file_list):
+    """
+    This routine is for obtaining ALL stars when plotting so that
+    the constellations can be drawn.
+
+    Although IO is present here, it is only called once per 1 day of data.
+    """
+    from astropy.io import fits
+    from astropy.wcs.wcs import WCS
+    from astropy.time import Time
+    from skyfield.api import load
+
+    # Get ephemeris planetary data:
+    ephemeris = load_planetary_data()
+    earth = ephemeris.earth
+
+    # Load star data:
+    stars = load_star_data()
+
+    # Time scale:
+    ts = load.timescale()
+
+    full_star_x, full_star_y = [], []
+    full_star_id = []
+    for f in input_file_list[:]:
+        # print(f'Identifying objects for file: {os.path.basename(f)}')
+        with fits.open(f) as hdul:
+            header = hdul[1].header
+            # data.append(hdul[1].data)
+            wcs = WCS(header, key="A")
+
+            # Define the observer:
+            observer_latitude = 0
+            observer_longitude = 75.2
+            observer = earth + earth.wgs84.latlon(observer_latitude, observer_longitude)  # Define observer location
+
+            # Set the observation time (assuming you can get this from the FITS header)
+            observation_time = header["DATE-OBS"]
+            t = ts.from_astropy(Time(observation_time))
+
+            # FOR STARS:
+            # -----------
+            # Now that we have constructed our projection, compute the x and y
+            # coordinates that each star and the comet will have on the plot.
+            star_positions = observer.at(t).observe(Star.from_dataframe(stars))
+            s_ra, s_dec, s_distance = star_positions.radec()
+            s_x, s_y = wcs.all_world2pix(s_ra.degrees, s_dec.degrees, 1)  # 1 for origin at 1
+            s_id = np.array(stars.index)
+            full_star_x.append(s_x / 2)
+            full_star_y.append(s_y / 2)
+            full_star_id.append(s_id)
+
+
 def load_comet_data() -> pd.DataFrame | None:
     """
     Load the comet data.
