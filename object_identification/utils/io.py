@@ -66,3 +66,11 @@ def write_output(obs_time: str, end_time: str, data_dict: dict[str, Any]) -> Non
             json.dump(data_dict, data_file, indent=4)
     except TypeError:
         raise CCORExitError("No data to output...skipping file")
+
+
+def get_vignetting_func() -> npt.NDArray[Any]:
+    """
+    Retrieve the vignetting function for plotting.
+    """
+    with fits.open(os.path.join(ROOT_DIR, "static_required/vig_ccor1_20250209.fits")) as hdul:
+        return hdul[0].data
