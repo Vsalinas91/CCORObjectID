@@ -38,7 +38,7 @@ def get_ccor_locations(
     return ObjectLocations(s_x=obj_x / 2, s_y=obj_y / 2, object_distance=obj_distance)
 
 
-def get_ccor_locations_sunpy(ccor_map: GenericMap, observation_time: str, wcs: WCS) -> dict[str, Any | None]:
+def get_ccor_locations_sunpy(ccor_map: GenericMap, observation_time: str, wcs: WCS) -> dict[str, tuple[Any, Any]]:
     """
     Get the pixel locations for planetary bodies using SunPy's Map object
     """
@@ -46,9 +46,9 @@ def get_ccor_locations_sunpy(ccor_map: GenericMap, observation_time: str, wcs: W
     el = EarthLocation.from_geocentric(x=ccor_itrs.x, y=ccor_itrs.y, z=ccor_itrs.z)
 
     keys = ["mercury", "venus", "mars", "jupiter", "saturn", "uranus", "neptune", "moon"]
-    planet_dict = {}.fromkeys(keys)
+    planet_dict: dict[str, tuple[Any, Any]] = {}
 
-    for key in planet_dict:
+    for key in keys:
         body = get_body(key, time=Time(observation_time), location=el)
         body_skycoord = SkyCoord(body.ra, body.dec, frame="icrs", unit="deg")
         body_pixel_x, body_pixel_y = wcs.world_to_pixel(body_skycoord)
