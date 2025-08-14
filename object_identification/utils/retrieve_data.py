@@ -3,7 +3,6 @@ from skyfield.data import hipparcos, mpc, stellarium
 from skyfield.vectorlib import VectorFunction
 
 import os
-import numpy as np
 
 from dataclasses import dataclass
 from typing import Any
@@ -72,7 +71,7 @@ def get_star_magnitude_mask(stars: pd.DataFrame, limiting_magnitude: float = 7.0
     """
     star_data = Star.from_dataframe(stars)
     bright_stars = stars.magnitude <= limiting_magnitude * 2.5  # 1.5 for best affect
-    magnitude = stars["magnitude"][bright_stars]
+    magnitude = stars["magnitude"][bright_stars].values
     marker_size = (0.5 + limiting_magnitude - magnitude) ** 2.0
     return GetStarMags(
         star_data=star_data,
@@ -103,7 +102,7 @@ def subset_star_data(
     fov_mask = (good_sx * 2 <= nx) & (good_sx > 0) & (good_sy * 2 <= ny) & (good_sy > 0)
     good_sx_sub = good_sx[fov_mask].tolist()
     good_sy_sub = good_sy[fov_mask].tolist()
-    good_markers_sub = np.asarray(marker_size[fov_mask])
+    good_markers_sub = marker_size[fov_mask]
     good_star_ids = s_id[bright_stars][fov_mask]
 
     return GetStarsSubset(stars_x=good_sx_sub, stars_y=good_sy_sub, markers=good_markers_sub, stars_ids=good_star_ids)
