@@ -21,6 +21,7 @@ ROOT_DIR = Path(__file__).parent.parent.parent
 @dataclass(frozen=True, kw_only=True)
 class GetData:
     image_data: npt.NDArray[Any]
+    header: fits.Header
     WCS: WCS
     ccor_map: smap.GenericMap
     time: Timescale
@@ -39,7 +40,9 @@ def read_input(input: str, ts: Timescale) -> GetData:
         end_time = header["DATE-END"]
         time = ts.from_astropy(Time(obs_time))
 
-    return GetData(image_data=data, WCS=wcs, ccor_map=ccor_map, time=time, obs_time=obs_time, end_time=end_time)
+    return GetData(
+        image_data=data, header=header, WCS=wcs, ccor_map=ccor_map, time=time, obs_time=obs_time, end_time=end_time
+    )
 
 
 def write_output(obs_time: str, end_time: str, data_dict: dict[str, Any]) -> None:
