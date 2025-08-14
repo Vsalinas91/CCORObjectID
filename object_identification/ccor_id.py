@@ -4,8 +4,9 @@ from .utils.retrieve_data import (
     load_comet_data,
     subset_star_data,
     get_star_magnitude_mask,
+    load_constellation_data,
 )
-from .utils.io import read_input, write_output
+from .utils.io import read_input, write_output, get_vignetting_func
 from .utils.coordinate_transformations import (
     get_ccor_locations,
     get_ccor_locations_sunpy,
@@ -15,6 +16,8 @@ from .utils.coordinate_transformations import (
 )
 from .utils.exceptions import CCORExitError
 
+from .visualization import make_figure
+
 import os
 from skyfield.api import load
 from pathlib import Path
@@ -23,7 +26,7 @@ import numpy as np
 import numpy.typing as npt
 
 
-def run_alg(inputs: list[Any]) -> None:
+def run_alg(inputs: list[Any], generate_figures: bool = False, write_output_files: bool = True) -> None:
     """
     Process CCOR L3 data to identify celestial objects within it's field of view (FOV).
 
@@ -54,20 +57,27 @@ def run_alg(inputs: list[Any]) -> None:
     bright_stars = get_star_magnitudes.bright_stars
     marker_size = get_star_magnitudes.marker_size
 
+    # Get constellations:
+    constellations = load_constellation_data()
+
     # Define the observer (approximate from GEO location for G19):
     observer = get_ccor_observer(earth)
+
+    if generate_figures:
+        vig_data = get_vignetting_func()
 
     for f in inputs[:1]:  # 10]:
         # For now, just initialize empty lists - will look into a
         # more effective solution later (maybe dict-like object)
         star_dict = {}
-        planet_dict = {}
+        planet_dict: dict[str, tuple[Any, Any]] = {}
         data_dict = {}
         comet_dict = {}
 
         print(f"Identifying objects for file: {os.path.basename(f)}")
         get_input_data = read_input(f, ts)
         data = get_input_data.image_data  # noqa: F841
+        header = get_input_data.header  # noqa: F841
         wcs = get_input_data.WCS
         ccor_map = get_input_data.ccor_map
         t = get_input_data.time
@@ -77,6 +87,7 @@ def run_alg(inputs: list[Any]) -> None:
         # FOR STARS:
         # -----------
         star_locations = get_ccor_locations(observer, t, wcs, star_data)
+        # All stars
         s_x = star_locations.s_x
         s_y = star_locations.s_y
         # Now subset to the field of view only:
@@ -106,11 +117,6 @@ def run_alg(inputs: list[Any]) -> None:
         star_dict["star_ids"] = good_star_ids.tolist()
         star_dict["star_names"] = np.array(good_star_names, dtype=object).tolist()
 
-        # Planetary
-        keys = ["mercury", "venus", "moon", "mars", "jupiter", "saturn", "uranus", "neptune"]
-        for k in keys:
-            planet_dict[k] = planet_locations[k]
-
         # Data:
         data_dict["date_obs"] = observation_time
         data_dict["date_end"] = end_time
@@ -118,11 +124,37 @@ def run_alg(inputs: list[Any]) -> None:
 
         combined_dict = {**data_dict, **comet_dict, **planet_dict, **star_dict}
 
-        try:
-            write_output(observation_time, end_time, combined_dict)
-        except CCORExitError as e:
-            print(str(e))
-            return None
+        if write_output_files:
+            try:
+                write_output(observation_time, end_time, combined_dict)
+            except CCORExitError as e:
+                print(str(e))
 
-    # Plot if desired:
-    # make_plots()
+        # Plot if desired:
+        if generate_figures:
+            current_image_yaw_state = make_figure.set_image_yaw_state(header["YAWFLIP"])
+            image_frame_coords = make_figure.scale_coordinates(header["CRPIX1"], header["CRPIX2"])
+            scaling = image_frame_coords.scaling
+            crpix1 = image_frame_coords.crpix1
+            crpix2 = image_frame_coords.crpix2
+            if header["NBIN"] > 1:
+                vig_data = make_figure.reduce_vignette(vig_data, current_image_yaw_state)
+
+            # Generate figure for each time frame:
+            make_figure.plot_figure(
+                data,
+                data_dict["date_obs"],
+                vig_data,
+                comet_dict["comet_locs"],
+                comet_dict["comet"],
+                star_dict["stars"],
+                s_id,
+                good_markers_sub,
+                s_x,
+                s_y,
+                constellations,
+                planet_locations,
+                scaling,
+                crpix1,
+                crpix2,
+            )

@@ -141,9 +141,9 @@ def plot_figure(
     vig_data: npt.NDArray[Any],
     comet_locs: list[tuple[Any, Any]],
     comet_name: list[str],
-    star_locs: tuple[list[Any], list[Any]],
+    star_locs: tuple[npt.NDArray[Any], npt.NDArray[Any]],
     star_ids: npt.NDArray[Any],
-    star_marker_size: list[Any],
+    star_marker_size: npt.NDArray[Any],
     all_star_x: npt.NDArray[Any],
     all_star_y: npt.NDArray[Any],
     constellations: list[Any],
@@ -258,6 +258,9 @@ def plot_figure(
 
     ax[1].add_artist(planet_legend)
 
+    # ---------------------------------
+    # FINAL PLOT SET UP AND FORMATTING
+    # ---------------------------------
     # Overlay pylon/occulter disc on object map
     ax[1].contourf(np.ma.MaskedArray(vig_data, mask=vig_data > 0.01), colors="black", hatches=["//"])
     ax[1].contour(vig_data, levels=[0.009, 0.01], colors="white", linewidths=0.7, alpha=0.7)
