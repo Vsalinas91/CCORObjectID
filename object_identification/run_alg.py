@@ -11,7 +11,7 @@ def do_processing(
     data specified in the input_dir input argument on the command line.
     """
     # get files:
-    files = sorted(glob.glob(input_dir + "*.fits"))[:1]
+    files = sorted(glob.glob(input_dir + "*.fits"))[1:2]
 
     # execute algorithm for input file stack:
     # try:
@@ -33,4 +33,4 @@ if __name__ == "__main__":
     save_figures = args.save_figures
     write_outputs = args.write_outputs
 
-    do_processing(input_dir, generate_figures, write_outputs, save_figures)
+    do_processing(input_dir, generate_figures, save_figures, write_outputs)
