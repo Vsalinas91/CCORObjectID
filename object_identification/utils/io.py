@@ -77,3 +77,9 @@ def get_vignetting_func() -> npt.NDArray[Any]:
     """
     with fits.open(os.path.join(ROOT_DIR, "static_required/vig_ccor1_20250209.fits")) as hdul:
         return hdul[0].data
+
+
+def check_metadata(header: fits.Header) -> bool:
+    ref_crpix1 = header["CRPIX1"]
+    nrows = header["NAXIS1"]
+    return ref_crpix1 <= (nrows / 2)
