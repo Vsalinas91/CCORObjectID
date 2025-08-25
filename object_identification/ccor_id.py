@@ -1,4 +1,4 @@
-from .utils.retrieve_data import (
+from utils.retrieve_data import (
     load_planetary_data,
     load_star_data,
     load_comet_data,
@@ -6,17 +6,17 @@ from .utils.retrieve_data import (
     get_star_magnitude_mask,
     load_constellation_data,
 )
-from .utils.io import read_input, write_output, get_vignetting_func
-from .utils.coordinate_transformations import (
+from utils.io import read_input, write_output, get_vignetting_func
+from utils.coordinate_transformations import (
     get_ccor_locations,
     get_ccor_locations_sunpy,
     get_comet_locations,
     get_star_names,
     get_ccor_observer,
 )
-from .utils.exceptions import CCORExitError
+from utils.exceptions import CCORExitError
 
-from .visualization import make_figure
+from visualization import make_figure
 
 import os
 from skyfield.api import load
@@ -139,7 +139,8 @@ def run_alg(
             scaling = image_frame_coords.scaling
             crpix1 = image_frame_coords.crpix1
             crpix2 = image_frame_coords.crpix2
-            if header["NBIN"] > 1:
+
+            if data.shape[0] != vig_data.shape[0]:
                 vig_data = make_figure.reduce_vignette(vig_data, current_image_yaw_state)
 
             # Generate figure for each time frame:
@@ -149,7 +150,7 @@ def run_alg(
                 data_dict["date_end"],
                 vig_data,
                 comet_dict["comet_locs"],
-                comet_dict["comet"],
+                comet_dict["comets"],
                 star_dict["stars"],
                 s_id,
                 good_markers_sub,
