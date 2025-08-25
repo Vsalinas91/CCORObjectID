@@ -165,6 +165,8 @@ def plot_figure(
     [axs.set_xticks([]) for axs in ax.flatten()]
     [axs.set_yticks([]) for axs in ax.flatten()]
 
+    ax[1].set_facecolor("black")
+
     # --------------------------------
     # PLOT THE DATA and OVERLAY COMET
     # --------------------------------
@@ -193,7 +195,7 @@ def plot_figure(
     ax[1].scatter(
         star_locs[0] * scaling,
         star_locs[1] * scaling,
-        s=star_marker_size * 2,
+        s=star_marker_size[0] * 20,
         color="w",
         edgecolor="C0",
         marker="o",
