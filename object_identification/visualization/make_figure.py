@@ -37,8 +37,8 @@ class ConstellationData:
     get_const_lines: list[Any]
 
 
-def reduce_vignette(vig_file: npt.NDArray[Any], flip: int) -> npt.NDArray[Any]:
-    return block_reduce(np.rot90(vig_file[0].data, flip), block_size=2, func=np.nanmean)
+def reduce_vignette(vig_data: npt.NDArray[Any], flip: int) -> npt.NDArray[Any]:
+    return block_reduce(np.rot90(vig_data, flip), block_size=2, func=np.nanmean)
 
 
 def set_image_yaw_state(yawflip: int | float) -> int:
