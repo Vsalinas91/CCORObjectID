@@ -193,9 +193,9 @@ def plot_figure(
 
     # Plot the star map:
     ax[1].scatter(
-        star_locs[0] * scaling,
-        star_locs[1] * scaling,
-        s=star_marker_size[0] * 20,
+        np.array(star_locs[0]) * scaling,
+        np.array(star_locs[1]) * scaling,
+        s=star_marker_size * 2,
         color="w",
         edgecolor="C0",
         marker="o",
@@ -225,7 +225,7 @@ def plot_figure(
 
     # Plot Constellations:
     constellations_to_plot = plot_constellations(
-        constellations, star_ids, all_star_x, all_star_y, scaling, naxis1, naxis2, crpix1, crpix2, ax[1]
+        constellations, star_ids, all_star_x / 2, all_star_y / 2, scaling, naxis1, naxis2, crpix1, crpix2, ax[1]
     )
 
     # Only build legend using valid constellations if not None
