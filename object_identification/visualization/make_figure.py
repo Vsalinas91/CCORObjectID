@@ -37,8 +37,8 @@ class ConstellationData:
     get_const_lines: list[Any]
 
 
-def reduce_vignette(vig_file: npt.NDArray[Any], flip: int) -> npt.NDArray[Any]:
-    return block_reduce(np.rot90(vig_file[0].data, flip), block_size=2, func=np.nanmean)
+def reduce_vignette(vig_data: npt.NDArray[Any], flip: int) -> npt.NDArray[Any]:
+    return block_reduce(np.rot90(vig_data, flip), block_size=2, func=np.nanmean)
 
 
 def set_image_yaw_state(yawflip: int | float) -> int:
@@ -165,6 +165,8 @@ def plot_figure(
     [axs.set_xticks([]) for axs in ax.flatten()]
     [axs.set_yticks([]) for axs in ax.flatten()]
 
+    ax[1].set_facecolor("black")
+
     # --------------------------------
     # PLOT THE DATA and OVERLAY COMET
     # --------------------------------
@@ -191,8 +193,8 @@ def plot_figure(
 
     # Plot the star map:
     ax[1].scatter(
-        star_locs[0] * scaling,
-        star_locs[1] * scaling,
+        np.array(star_locs[0]) * scaling,
+        np.array(star_locs[1]) * scaling,
         s=star_marker_size * 2,
         color="w",
         edgecolor="C0",
@@ -223,7 +225,7 @@ def plot_figure(
 
     # Plot Constellations:
     constellations_to_plot = plot_constellations(
-        constellations, star_ids, all_star_x, all_star_y, scaling, naxis1, naxis2, crpix1, crpix2, ax[1]
+        constellations, star_ids, all_star_x / 2, all_star_y / 2, scaling, naxis1, naxis2, crpix1, crpix2, ax[1]
     )
 
     # Only build legend using valid constellations if not None

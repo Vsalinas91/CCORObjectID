@@ -1,4 +1,4 @@
-from .utils.retrieve_data import (
+from utils.retrieve_data import (
     load_planetary_data,
     load_star_data,
     load_comet_data,
@@ -6,17 +6,17 @@ from .utils.retrieve_data import (
     get_star_magnitude_mask,
     load_constellation_data,
 )
-from .utils.io import read_input, write_output, get_vignetting_func
-from .utils.coordinate_transformations import (
+from utils.io import read_input, write_output, get_vignetting_func, check_metadata
+from utils.coordinate_transformations import (
     get_ccor_locations,
     get_ccor_locations_sunpy,
     get_comet_locations,
     get_star_names,
     get_ccor_observer,
 )
-from .utils.exceptions import CCORExitError
+from utils.exceptions import CCORExitError
 
-from .visualization import make_figure
+from visualization import make_figure
 
 import os
 from skyfield.api import load
@@ -86,6 +86,9 @@ def run_alg(
         observation_time = get_input_data.obs_time
         end_time = get_input_data.end_time
 
+        # Check if coordinates need scaling due to bad metadata:
+        is_scaled = check_metadata(header)
+
         # FOR STARS:
         # -----------
         star_locations = get_ccor_locations(observer, t, wcs, star_data)
@@ -93,7 +96,7 @@ def run_alg(
         s_x = star_locations.s_x
         s_y = star_locations.s_y
         # Now subset to the field of view only:
-        star_object = subset_star_data(s_x, s_y, bright_stars, marker_size, s_id)
+        star_object = subset_star_data(s_x, s_y, bright_stars, marker_size, s_id, is_scaled=is_scaled)
         good_sx_sub = star_object.stars_x
         good_sy_sub = star_object.stars_y
         good_markers_sub = star_object.markers
@@ -136,10 +139,10 @@ def run_alg(
         if generate_figures:
             current_image_yaw_state = make_figure.set_image_yaw_state(header["YAWFLIP"])
             image_frame_coords = make_figure.scale_coordinates(header["CRPIX1"], header["CRPIX2"])
-            scaling = image_frame_coords.scaling
             crpix1 = image_frame_coords.crpix1
             crpix2 = image_frame_coords.crpix2
-            if header["NBIN"] > 1:
+
+            if data.shape[0] != vig_data.shape[0]:
                 vig_data = make_figure.reduce_vignette(vig_data, current_image_yaw_state)
 
             # Generate figure for each time frame:
@@ -149,7 +152,7 @@ def run_alg(
                 data_dict["date_end"],
                 vig_data,
                 comet_dict["comet_locs"],
-                comet_dict["comet"],
+                comet_dict["comets"],
                 star_dict["stars"],
                 s_id,
                 good_markers_sub,
@@ -157,7 +160,7 @@ def run_alg(
                 s_y,
                 constellations,
                 planet_locations,
-                scaling,
+                2 if is_scaled else 1,
                 crpix1,
                 crpix2,
                 save_figures=save_figures,

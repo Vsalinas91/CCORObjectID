@@ -15,7 +15,7 @@ from skyfield.timelib import Timescale
 
 from .exceptions import CCORExitError
 
-ROOT_DIR = Path(__file__).parent.parent.parent
+ROOT_DIR = Path(__file__).parent.parent
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -57,13 +57,13 @@ def write_output(obs_time: str, end_time: str, data_dict: dict[str, Any]) -> Non
 
     # Create output directory if it does  not exist:
     try:
-        os.makedirs(os.path.join(ROOT_DIR, f"outputs/{out_dir}"), exist_ok=True)
+        os.makedirs(os.path.join(ROOT_DIR.parent, f"outputs/{out_dir}"), exist_ok=True)
     except OSError as e:
         print(f"Error creating data directory: {str(e)}")
 
     try:
         with open(
-            os.path.join(ROOT_DIR, f"outputs/{out_dir}/sci_ccor1-obj_g19_{file_tstamp}_{creation}_pub.json"),
+            os.path.join(ROOT_DIR.parent, f"outputs/{out_dir}/sci_ccor1-obj_g19_{file_tstamp}_{creation}_pub.json"),
             "w",
         ) as data_file:
             json.dump(data_dict, data_file, indent=4)
@@ -77,3 +77,9 @@ def get_vignetting_func() -> npt.NDArray[Any]:
     """
     with fits.open(os.path.join(ROOT_DIR, "static_required/vig_ccor1_20250209.fits")) as hdul:
         return hdul[0].data
+
+
+def check_metadata(header: fits.Header) -> bool:
+    ref_crpix1 = header["CRPIX1"]
+    nrows = header["NAXIS1"]
+    return ref_crpix1 <= (nrows / 2)
