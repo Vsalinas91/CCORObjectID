@@ -15,7 +15,7 @@ from skyfield.timelib import Timescale
 
 from .exceptions import CCORExitError
 
-ROOT_DIR = Path(__file__).parent.parent.parent
+ROOT_DIR = Path(__file__).parent.parent
 
 
 @dataclass(frozen=True, kw_only=True)
