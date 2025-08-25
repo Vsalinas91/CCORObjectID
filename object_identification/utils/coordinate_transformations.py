@@ -35,7 +35,7 @@ def get_ccor_locations(
     # Get the angular positions for converting to the WCS CCOR pixel world
     obj_ra, obj_dec, obj_distance = object_positions.radec()
     obj_x, obj_y = wcs.all_world2pix(obj_ra.degrees, obj_dec.degrees, 1)  # 1 for origin at 1
-    return ObjectLocations(s_x=obj_x / 2, s_y=obj_y / 2, object_distance=obj_distance)
+    return ObjectLocations(s_x=obj_x, s_y=obj_y, object_distance=obj_distance)
 
 
 def get_ccor_locations_sunpy(ccor_map: GenericMap, observation_time: str, wcs: WCS) -> dict[str, tuple[Any, Any]]:
