@@ -26,7 +26,9 @@ import numpy as np
 import numpy.typing as npt
 
 
-def run_alg(inputs: list[Any], generate_figures: bool = False, write_output_files: bool = True) -> None:
+def run_alg(
+    inputs: list[Any], generate_figures: bool = False, write_output_files: bool = True, save_figures: bool = False
+) -> None:
     """
     Process CCOR L3 data to identify celestial objects within it's field of view (FOV).
 
@@ -144,6 +146,7 @@ def run_alg(inputs: list[Any], generate_figures: bool = False, write_output_file
             make_figure.plot_figure(
                 data,
                 data_dict["date_obs"],
+                data_dict["date_end"],
                 vig_data,
                 comet_dict["comet_locs"],
                 comet_dict["comet"],
@@ -157,4 +160,5 @@ def run_alg(inputs: list[Any], generate_figures: bool = False, write_output_file
                 scaling,
                 crpix1,
                 crpix2,
+                save_figures=save_figures,
             )

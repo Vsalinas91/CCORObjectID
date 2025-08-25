@@ -11,8 +11,10 @@ from .color_map import ccor_blue
 from typing import Any
 import numpy.typing as npt
 from dataclasses import dataclass
+from pathlib import Path
+import os
 
-
+ROOT_DIR = Path(__file__).parent.parent.parent
 CMAP = ccor_blue()
 
 
@@ -138,6 +140,7 @@ def plot_constellations(
 def plot_figure(
     data: npt.NDArray[Any],
     date_obs: str,
+    date_end: str,
     vig_data: npt.NDArray[Any],
     comet_locs: list[tuple[Any, Any]],
     comet_name: list[str],
@@ -153,6 +156,7 @@ def plot_figure(
     crpix2: int | float,
     naxis1: int = 2048,
     naxis2: int = 1920,
+    save_figures: bool = False,
 ):
     """
     Plot the L3 image along side the object map.
@@ -273,4 +277,22 @@ def plot_figure(
     ax[1].set_title("Object Map", fontsize=15)
     ax[0].set_title(f"CCOR-1: {date_obs}", fontsize=14)
 
+    if save_figures:
+        save_figure(date_obs, date_end)
     plt.show()
+
+
+def save_figure(obs_time: str, end_time: str) -> None:
+    obs_time_fmt = obs_time.replace("-", "").replace(":", "").split(".")[0]
+    end_time_fmt = end_time.replace("-", "").replace(":", "").split(".")[0]
+    file_tstamp = f"s{obs_time_fmt}Z_e{end_time_fmt}Z"
+    out_dir = f"{obs_time_fmt.split('T')[0]}"
+
+    try:
+        os.makedirs(os.path.join(ROOT_DIR, f"figures/{out_dir}"), exist_ok=True)
+    except OSError as e:
+        print(f"Error creating data directory: {str(e)}")
+
+    plt.savefig(
+        os.path.join(ROOT_DIR, f"figures/{out_dir}/sci_ccor1-obj_g19_{file_tstamp}.png"), dpi=150, bbox_inches="tight"
+    )
