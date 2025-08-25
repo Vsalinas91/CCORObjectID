@@ -99,9 +99,9 @@ def subset_star_data(
     good_sy = s_y[bright_stars]
 
     # Subset to the FOV
-    fov_mask = (good_sx <= nx / 2) & (good_sx > 0) & (good_sy <= ny / 2) & (good_sy > 0)
-    good_sx_sub = (good_sx[fov_mask]).tolist()
-    good_sy_sub = (good_sy[fov_mask]).tolist()
+    fov_mask = (good_sx * 2 <= nx) & (good_sx > 0) & (good_sy * 2 <= ny) & (good_sy > 0)
+    good_sx_sub = (good_sx[fov_mask] / 2).tolist()
+    good_sy_sub = (good_sy[fov_mask] / 2).tolist()
     good_markers_sub = marker_size[fov_mask]
     good_star_ids = s_id[bright_stars][fov_mask]
 
