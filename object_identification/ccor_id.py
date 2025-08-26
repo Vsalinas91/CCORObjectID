@@ -63,24 +63,27 @@ def run_alg(
     bright_stars = get_star_magnitudes.bright_stars
     marker_size = get_star_magnitudes.marker_size
 
-    # Get constellations:
+    # Get constellation data (contains names, and connecting star edges, or star catalogue IDs):
     constellations = load_constellation_data()
 
     # Define the observer (approximate from GEO location for G19):
     observer = get_ccor_observer(earth)
 
+    # Get the vignetting function for masking out the pylon/occulter disc
+    # in the object map.
     if generate_figures:
         vig_data = get_vignetting_func()
 
     for f in inputs[:1]:  # 10]:
-        # For now, just initialize empty lists - will look into a
-        # more effective solution later (maybe dict-like object)
+        # Initialize dicts to store the data
+        # recombine when writing to output file.
         star_dict = {}
         planet_dict: dict[str, tuple[Any, Any]] = {}
         data_dict = {}
         comet_dict = {}
 
-        logger.info(f"Identifying objects for file: {os.path.basename(f)}")
+        # Get relevant data from the input L3 data file.
+        logger.info(f"Running object identification for file: {os.path.basename(f)}")
         get_input_data = read_input(f, ts)
         data = get_input_data.image_data  # noqa: F841
         header = get_input_data.header  # noqa: F841
@@ -89,8 +92,12 @@ def run_alg(
         t = get_input_data.time
         observation_time = get_input_data.obs_time
         end_time = get_input_data.end_time
+        logger.info(f"Identifying objects for observing time: {observation_time}")
 
         # Check if coordinates need scaling due to bad metadata:
+        # this is a special case for our L3 products as we failed to
+        # scale CRPIX, CDELT for the L3 products - this ensures that issue is
+        # handled if it is to arise.
         is_scaled = check_metadata(header)
 
         # FOR STARS:
@@ -108,14 +115,16 @@ def run_alg(
         # Get the star names from their ids:
         good_star_names = get_star_names(good_star_ids)
 
-        # FOR PLANETS/Moon:
+        # FOR PLANETS/MOON:
         # ----------------
         planet_locations = get_ccor_locations_sunpy(ccor_map, observation_time, wcs)
 
         # FOR COMETS:
         # -----------
-        valid_pixels, get_comet, get_distance = get_comet_locations(comets, sun, ts, observer, t, wcs)
+        valid_pixels, get_comet, _ = get_comet_locations(comets, sun, ts, observer, t, wcs)
 
+        # FILE OUTGEST:
+        # -------------
         # Append the data
         comet_dict["comets"] = get_comet
         comet_dict["comet_locs"] = valid_pixels
@@ -139,13 +148,16 @@ def run_alg(
             except CCORExitError:
                 logger.exception("Cannot produce output file.")
 
-        # Plot if desired:
+        # PLOT IF TOGGLED:
+        # ------------------
         if generate_figures:
             current_image_yaw_state = make_figure.set_image_yaw_state(header["YAWFLIP"])
             image_frame_coords = make_figure.scale_coordinates(header["CRPIX1"], header["CRPIX2"])
             crpix1 = image_frame_coords.crpix1
             crpix2 = image_frame_coords.crpix2
+            scale_by = 2 if is_scaled else 1
 
+            # If the image is binned, bin the vignetting data too.
             if data.shape[0] != vig_data.shape[0]:
                 vig_data = make_figure.reduce_vignette(vig_data, current_image_yaw_state)
 
@@ -164,7 +176,7 @@ def run_alg(
                 s_y,
                 constellations,
                 planet_locations,
-                2 if is_scaled else 1,
+                scale_by,
                 crpix1,
                 crpix2,
                 save_figures=save_figures,
