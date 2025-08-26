@@ -19,11 +19,15 @@ from utils.exceptions import CCORExitError
 from visualization import make_figure
 
 import os
+import logging
 from skyfield.api import load
 from pathlib import Path
 from typing import Any
 import numpy as np
 import numpy.typing as npt
+
+logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
+logger = logging.getLogger(__name__)
 
 
 def run_alg(
@@ -76,7 +80,7 @@ def run_alg(
         data_dict = {}
         comet_dict = {}
 
-        print(f"Identifying objects for file: {os.path.basename(f)}")
+        logger.info(f"Identifying objects for file: {os.path.basename(f)}")
         get_input_data = read_input(f, ts)
         data = get_input_data.image_data  # noqa: F841
         header = get_input_data.header  # noqa: F841
@@ -132,8 +136,8 @@ def run_alg(
         if write_output_files:
             try:
                 write_output(observation_time, end_time, combined_dict)
-            except CCORExitError as e:
-                print(str(e))
+            except CCORExitError:
+                logger.exception("Cannot produce output file.")
 
         # Plot if desired:
         if generate_figures:

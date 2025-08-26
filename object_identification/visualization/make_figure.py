@@ -1,6 +1,7 @@
 from skimage.measure import block_reduce
 import numpy as np
 from scipy.ndimage import gaussian_filter as gf
+import logging
 
 import matplotlib.pyplot as plt
 from matplotlib import colors
@@ -13,6 +14,9 @@ import numpy.typing as npt
 from dataclasses import dataclass
 from pathlib import Path
 import os
+
+logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
+logger = logging.getLogger(__name__)
 
 ROOT_DIR = Path(__file__).parent.parent.parent
 CMAP = ccor_blue()
@@ -292,8 +296,8 @@ def save_figure(obs_time: str, end_time: str) -> None:
 
     try:
         os.makedirs(os.path.join(ROOT_DIR, f"figures/{out_dir}"), exist_ok=True)
-    except OSError as e:
-        print(f"Error creating data directory: {str(e)}")
+    except OSError:
+        logger.exception("Error creating data directory.")
 
     plt.savefig(
         os.path.join(ROOT_DIR, f"figures/{out_dir}/sci_ccor1-obj_g19_{file_tstamp}.png"), dpi=150, bbox_inches="tight"

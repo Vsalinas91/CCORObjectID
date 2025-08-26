@@ -2,7 +2,7 @@ import json
 import os
 import datetime
 import warnings
-
+import logging
 
 from astropy.io import fits
 from astropy.wcs import WCS
@@ -20,6 +20,8 @@ from .exceptions import CCORExitError
 # Supress data ingest warnings.
 warnings.filterwarnings("ignore")
 
+logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
+logger = logging.getLogger(__name__)
 
 ROOT_DIR = Path(__file__).parent.parent
 
@@ -64,8 +66,8 @@ def write_output(obs_time: str, end_time: str, data_dict: dict[str, Any]) -> Non
     # Create output directory if it does  not exist:
     try:
         os.makedirs(os.path.join(ROOT_DIR.parent, f"outputs/{out_dir}"), exist_ok=True)
-    except OSError as e:
-        print(f"Error creating data directory: {str(e)}")
+    except OSError:
+        logger.exception("Error creating data directory.")
 
     try:
         with open(

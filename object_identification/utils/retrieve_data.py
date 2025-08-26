@@ -3,12 +3,16 @@ from skyfield.data import hipparcos, mpc, stellarium
 from skyfield.vectorlib import VectorFunction
 
 import os
+import logging
 
 from dataclasses import dataclass
 from typing import Any
 import numpy.typing as npt
 import pandas as pd
 from pathlib import Path
+
+logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
+logger = logging.getLogger(__name__)
 
 CURRENT_DIR = Path(__file__).parent.parent
 
@@ -126,7 +130,7 @@ def load_comet_data() -> pd.DataFrame | None:
                 .set_index("designation", drop=False)
             )
     except Exception:
-        print("Could not load comet data - try different source.")
+        logging.exception("Could not load comet data - try different source.")
         return None
 
 
