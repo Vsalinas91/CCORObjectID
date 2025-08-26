@@ -119,11 +119,10 @@ def plot_constellations(
             xe, ye = star_locs_x[end] * scaling, star_locs_y[end] * scaling
 
             # For getting the right name
-            xline = np.linspace(xs, xe, 50)
-            yline = np.linspace(ys, ye, 50)
-
-            rline = np.sqrt((xline - crpix1) ** 2.0 + (yline - crpix2) ** 2.0)
-            good_points = np.hstack((rline < 560)).tolist().count(True)
+            xline = np.linspace(xs[0], xe[0], 50)
+            yline = np.linspace(ys[0], ye[0], 50)
+            rline = np.sqrt((xline - crpix1) ** 2.0 + (yline - crpix2) ** 2.0) < 560
+            good_points = rline.tolist().count(True)
 
             if (
                 any(xline * scaling > 0)
