@@ -201,8 +201,8 @@ def plot_figure(
 
     # Plot the star map:
     ax[1].scatter(
-        np.array(star_locs[0]) * scaling,
-        np.array(star_locs[1]) * scaling,
+        np.array(star_locs[0]),
+        np.array(star_locs[1]),
         s=star_marker_size * 2,
         color="w",
         edgecolor="C0",

@@ -61,9 +61,8 @@ def subset_star_data(
     bright_stars: npt.NDArray[Any],
     marker_size: npt.NDArray[Any],
     s_id: npt.NDArray[Any],
-    nx: int = 2048,
-    ny: int = 1920,
-    is_scaled: bool = True,
+    nx: int,
+    ny: int,
 ) -> GetStarsSubset:
     """
     Subset the star catalogue to the CCOR FOV.
@@ -72,12 +71,10 @@ def subset_star_data(
     good_sx = s_x[bright_stars]
     good_sy = s_y[bright_stars]
 
-    scale = 2 if is_scaled else 1
-
     # Subset to the FOV
-    fov_mask = (good_sx * scale <= nx) & (good_sx > 0) & (good_sy * scale <= ny) & (good_sy > 0)
-    good_sx_sub = (good_sx[fov_mask] / 2).tolist()
-    good_sy_sub = (good_sy[fov_mask] / 2).tolist()
+    fov_mask = (good_sx <= nx) & (good_sx > 0) & (good_sy <= ny) & (good_sy > 0)
+    good_sx_sub = (good_sx[fov_mask]).tolist()
+    good_sy_sub = (good_sy[fov_mask]).tolist()
     good_markers_sub = marker_size[fov_mask]
     good_star_ids = s_id[bright_stars][fov_mask]
 

@@ -92,6 +92,7 @@ def run_alg(
         t = get_input_data.time
         observation_time = get_input_data.obs_time
         end_time = get_input_data.end_time
+        image_dims = wcs.array_shape
         logger.info(f"Identifying objects for observing time: {observation_time}")
 
         # Check if coordinates need scaling due to bad metadata:
@@ -108,7 +109,15 @@ def run_alg(
         s_x = star_locations.s_x
         s_y = star_locations.s_y
         # Now subset to the field of view only:
-        star_object = subset_star_data(s_x, s_y, bright_stars, marker_size, s_id, is_scaled=is_scaled)
+        star_object = subset_star_data(
+            s_x=s_x,
+            s_y=s_y,
+            bright_stars=bright_stars,
+            marker_size=marker_size,
+            s_id=s_id,
+            nx=image_dims[1],
+            ny=image_dims[0],
+        )
         good_sx_sub = star_object.stars_x
         good_sy_sub = star_object.stars_y
         good_markers_sub = star_object.markers
