@@ -12,7 +12,6 @@ from skimage.measure import block_reduce
 import matplotlib.pyplot as plt
 from matplotlib import colors
 from matplotlib.axes import Axes
-from matplotlib.legend import Legend
 
 from .color_map import ccor_blue
 from .plotting_dataclasses import ImageCenterData, CelestialBodyPlot, ConstellationData
@@ -60,7 +59,7 @@ def plot_celstial_body(name: str, body_pixels: tuple[Any, Any], ax: Axes, color:
         if body_pixels[0] is not None:
             if name in ["Moon", "moon"]:
                 color = "w"
-            body_name = name
+            body_name = name.capitalize()
             body_plot = ax.scatter(body_pixels[0], body_pixels[1], marker="o", color=color, s=200, edgecolor="w")
 
     return CelestialBodyPlot(body_plot=body_plot, body_name=body_name)
@@ -68,11 +67,11 @@ def plot_celstial_body(name: str, body_pixels: tuple[Any, Any], ax: Axes, color:
 
 def setup_legends(
     data: list[Any], names: npt.NDArray[Any] | list[Any], title: str, ypos: int | float, axis: Axes
-) -> Legend:
+) -> None:
     """
     Routine to set up the object map legend.
     """
-    legend = axis.legend(
+    legend = plt.legend(
         data,
         names,
         bbox_to_anchor=(1.05, ypos),
@@ -84,8 +83,7 @@ def setup_legends(
         title=title,
     )
     plt.setp(legend.get_title(), color="w", weight="bold")
-
-    return legend
+    axis.add_artist(legend)
 
 
 def plot_constellations(
@@ -93,7 +91,6 @@ def plot_constellations(
     star_ids: npt.NDArray[Any],
     star_locs_x: npt.NDArray[Any],
     star_locs_y: npt.NDArray[Any],
-    scaling: int,
     naxis1: int,
     naxis2: int,
     crpix1: int | float,
@@ -109,8 +106,8 @@ def plot_constellations(
         for edge in edges:
             start = np.where(star_ids == edge[0])
             end = np.where(star_ids == edge[1])
-            xs, ys = star_locs_x[start] * scaling, star_locs_y[start] * scaling
-            xe, ye = star_locs_x[end] * scaling, star_locs_y[end] * scaling
+            xs, ys = star_locs_x[start], star_locs_y[start]
+            xe, ye = star_locs_x[end], star_locs_y[end]
 
             # For getting the right name
             xline = np.linspace(xs[0], xe[0], 50)
@@ -118,13 +115,8 @@ def plot_constellations(
             rline = np.sqrt((xline - crpix1) ** 2.0 + (yline - crpix2) ** 2.0) < 560
             good_points = rline.tolist().count(True)
 
-            if (
-                any(xline * scaling > 0)
-                & any(xline * scaling <= naxis1)
-                & any(yline * scaling > 0)
-                & any(yline * scaling <= naxis2 * 2)
-                & (good_points > 0)
-            ):
+            if any(xline > 0) & any(xline <= naxis1) & any(yline > 0) & any(yline <= naxis2 * 2) & (good_points > 0):
+                print(cname)
                 valid_name = cname
                 (const_lines,) = ax.plot(
                     [xs, xe], [ys, ye], linestyle="-", color=c_colors[c_ind], linewidth=1.5, zorder=-1, alpha=1
@@ -153,17 +145,16 @@ def plot_figure(
     all_star_y: npt.NDArray[Any],
     constellations: list[Any],
     planet_locs: dict[str, tuple[Any, Any]],
-    scaling: int,
     crpix1: int | float,
     crpix2: int | float,
-    naxis1: int = 2048,
-    naxis2: int = 1920,
+    naxis1: int,
+    naxis2: int,
     save_figures: bool = False,
 ) -> None:
     """
     Plot the L3 image along side the object map.
     """
-    fig, ax = plt.subplots(1, 2, figsize=(17, 5))
+    fig, ax = plt.subplots(1, 2, figsize=(12, 5))
     [axs.set_xticks([]) for axs in ax.flatten()]
     [axs.set_yticks([]) for axs in ax.flatten()]
 
@@ -217,12 +208,12 @@ def plot_figure(
     planet_colors = plt.cm.jet(np.linspace(0, 1, len(planet_locs)))  # type: ignore[attr-defined]
     for index, (planet_name, locs) in enumerate(planet_locs.items()):
         plot_planet = plot_celstial_body(name=planet_name, body_pixels=locs, ax=ax[1], color=planet_colors[index])
-        body_names.append(planet_name)
+        body_names.append(planet_name.capitalize())
         body_plots.append(plot_planet.body_plot)
 
     # Plot Constellations:
     constellations_to_plot = plot_constellations(
-        constellations, star_ids, all_star_x / 2, all_star_y / 2, scaling, naxis1, naxis2, crpix1, crpix2, ax[1]
+        constellations, star_ids, all_star_x, all_star_y, naxis1, naxis2, crpix1, crpix2, ax[1]
     )
 
     # Only build legend using valid constellations if not None
@@ -235,21 +226,48 @@ def plot_figure(
     # LEGENDS:
     # -------
     # Constellation(s)
-    constellation_legend = setup_legends(
-        data=np.array(get_valid_seg)[valid_indices].tolist(),
-        names=np.array(get_valid_name)[valid_indices].tolist(),
+    const_legend = ax[1].legend(
+        np.array(get_valid_seg)[valid_indices].tolist(),
+        np.array(get_valid_name)[valid_indices].tolist(),
+        bbox_to_anchor=(1.05, 1),
+        loc="upper left",
+        borderaxespad=0.0,
+        facecolor="k",
+        labelcolor="w",
+        prop={"weight": "bold"},
         title="Constellation(s)",
-        ypos=1,
-        axis=ax[1],
     )
-    # Planet(s)
-    planet_legend = setup_legends(data=body_plots, names=body_names, title="Planet(s)", ypos=0.55, axis=ax[1])
-    # Comet(s):
-    comet_legend = setup_legends(data=comet_plots, names=comet_names, title="Comet(s)", ypos=0.125, axis=ax[1])
+    plt.setp(const_legend.get_title(), color="w", weight="bold")
+    ax[1].add_artist(const_legend)
 
-    ax[1].add_artist(constellation_legend)
+    # Planet(s)
+    planet_legend = ax[1].legend(
+        body_plots,
+        body_names,
+        bbox_to_anchor=(1.05, 0.55),
+        loc="upper left",
+        borderaxespad=0.0,
+        facecolor="k",
+        labelcolor="w",
+        prop={"weight": "bold"},
+        title="Planet(s)",
+    )
+    plt.setp(planet_legend.get_title(), color="w", weight="bold")
     ax[1].add_artist(planet_legend)
-    ax[1].add_artist(comet_legend)
+
+    # Comet(s):
+    comet_legend = ax[1].legend(
+        comet_plots,
+        comet_names,
+        bbox_to_anchor=(1.05, 0.125),
+        loc="upper left",
+        borderaxespad=0.0,
+        facecolor="k",
+        labelcolor="w",
+        prop={"weight": "bold"},
+        title="Comet(s)",
+    )
+    plt.setp(comet_legend.get_title(), color="w", weight="bold")
 
     # ---------------------------------
     # FINAL PLOT SET UP AND FORMATTING
@@ -266,22 +284,24 @@ def plot_figure(
     ax[1].set_title("Object Map", fontsize=15)
     ax[0].set_title(f"CCOR-1: {date_obs}", fontsize=14)
 
-    if save_figures:
-        obs_time_fmt = date_obs.replace("-", "").replace(":", "").split(".")[0]
-        end_time_fmt = date_end.replace("-", "").replace(":", "").split(".")[0]
-        file_tstamp = f"s{obs_time_fmt}Z_e{end_time_fmt}Z"
-        out_dir = f"{obs_time_fmt.split('T')[0]}"
+    # plt.subplots_adjust(right=0.8)  # Adjust 'right' value as needed
+    plt.tight_layout()
 
-        try:
-            os.makedirs(os.path.join(ROOT_DIR, f"figures/{out_dir}"), exist_ok=True)
-        except OSError:
-            logger.exception("Error creating data directory.")
+    obs_time_fmt = date_obs.replace("-", "").replace(":", "").split(".")[0]
+    end_time_fmt = date_end.replace("-", "").replace(":", "").split(".")[0]
+    file_tstamp = f"s{obs_time_fmt}Z_e{end_time_fmt}Z"
+    out_dir = f"{obs_time_fmt.split('T')[0]}"
 
-        plt.savefig(
-            os.path.join(ROOT_DIR, f"figures/{out_dir}/sci_ccor1-obj_g19_{file_tstamp}.png"),
-            dpi=150,
-            bbox_inches="tight",
-        )
+    try:
+        os.makedirs(os.path.join(ROOT_DIR, f"figures/{out_dir}"), exist_ok=True)
+    except OSError:
+        logger.exception("Error creating data directory.")
 
-    plt.subplots_adjust(right=0.7)  # Adjust 'right' value as needed
-    plt.show()
+    plt.savefig(
+        os.path.join(ROOT_DIR, f"figures/{out_dir}/sci_ccor1-obj_g19_{file_tstamp}.png"),
+        dpi=150,
+        bbox_inches="tight",
+        bbox_extra_artists=(const_legend, planet_legend, comet_legend),
+    )
+
+    plt.close()
