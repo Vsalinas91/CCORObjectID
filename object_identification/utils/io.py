@@ -76,7 +76,5 @@ def get_vignetting_func() -> npt.NDArray[Any]:
         return hdul[0].data
 
 
-def check_metadata(header: fits.Header) -> bool:
-    ref_crpix1 = header["CRPIX1"]
-    nrows = header["NAXIS1"]
-    return ref_crpix1 <= (nrows / 2)
+def check_metadata(crpix: int | float) -> bool:
+    return crpix < 1000

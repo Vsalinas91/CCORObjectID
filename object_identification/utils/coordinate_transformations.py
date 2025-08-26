@@ -42,17 +42,30 @@ def get_ccor_locations_sunpy(ccor_map: GenericMap, observation_time: str, wcs: W
     keys = ["mercury", "venus", "mars", "jupiter", "saturn", "uranus", "neptune", "moon"]
     planet_dict: dict[str, tuple[Any, Any]] = {}
 
+    image_shape = wcs.array_shape
+
     for key in keys:
         body = get_body(key, time=Time(observation_time), location=el)
         body_skycoord = SkyCoord(body.ra, body.dec, frame="icrs", unit="deg")
         body_pixel_x, body_pixel_y = wcs.world_to_pixel(body_skycoord)
-        planet_dict[key] = (float(body_pixel_x) / 2, float(body_pixel_y) / 2)
+        if (
+            (body_pixel_x <= image_shape[1])
+            & (body_pixel_x > 0)
+            & (body_pixel_y <= image_shape[0])
+            & (body_pixel_y > 0)
+        ):
+            planet_dict[key] = (float(body_pixel_x), float(body_pixel_y))
 
     return planet_dict
 
 
 def get_comet_locations(
-    comets: DataFrame, sun: VectorFunction, ts: Timescale, observer: VectorFunction, observation_time: str, wcs: WCS
+    comets: DataFrame,
+    sun: VectorFunction,
+    ts: Timescale,
+    observer: VectorFunction,
+    observation_time: int | float,
+    wcs: WCS,
 ):
     """
     Get the comet pixel locations relative to CCOR's WCS and observation time.
@@ -61,6 +74,10 @@ def get_comet_locations(
     valid_pixels = []
     get_comet = []
     get_distance = []
+
+    # Define image shape
+    image_shape = wcs.array_shape
+
     # Iterate over all comets
     for body in comets["designation"]:
         # Get the data for each comet and define it's orbit
@@ -72,10 +89,17 @@ def get_comet_locations(
         # Get the comet position
         comet_x, comet_y = wcs.all_world2pix(comet_ra.degrees, comet_dec.degrees, 1)  # 1 for origin at 1
         # Make sure it's withing the FOV bounds:
-        if (comet_x <= 2048) & (comet_x > 0) & (comet_y <= 1920) & (comet_y > 0) & (distance.au < 2):
+        if (
+            (comet_x <= image_shape[1])
+            & (comet_x > 0)
+            & (comet_y <= image_shape[0])
+            & (comet_y > 0)
+            & (distance.au < 1)
+        ):
+            print(distance)
             get_comet.append(body)
             get_distance.append(distance)
-            valid_pixels.append((comet_x / 2, comet_y / 2))
+            valid_pixels.append((comet_x, comet_y))
 
     return (get_comet, get_distance, valid_pixels)
 

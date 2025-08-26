@@ -15,7 +15,7 @@ from utils.retrieve_data import (
     get_star_magnitude_mask,
     load_constellation_data,
 )
-from utils.io import read_input, write_output, get_vignetting_func, check_metadata
+from utils.io import read_input, write_output, get_vignetting_func
 from utils.coordinate_transformations import (
     get_ccor_locations,
     get_ccor_locations_sunpy,
@@ -74,7 +74,7 @@ def run_alg(
     if generate_figures:
         vig_data = get_vignetting_func()
 
-    for f in inputs[:1]:  # 10]:
+    for f in inputs[:]:
         # Initialize dicts to store the data
         # recombine when writing to output file.
         star_dict = {}
@@ -92,13 +92,8 @@ def run_alg(
         t = get_input_data.time
         observation_time = get_input_data.obs_time
         end_time = get_input_data.end_time
+        image_dims = wcs.array_shape
         logger.info(f"Identifying objects for observing time: {observation_time}")
-
-        # Check if coordinates need scaling due to bad metadata:
-        # this is a special case for our L3 products as we failed to
-        # scale CRPIX, CDELT for the L3 products - this ensures that issue is
-        # handled if it is to arise.
-        is_scaled = check_metadata(header)
 
         # FOR STARS:
         # -----------
@@ -107,7 +102,15 @@ def run_alg(
         s_x = star_locations.s_x
         s_y = star_locations.s_y
         # Now subset to the field of view only:
-        star_object = subset_star_data(s_x, s_y, bright_stars, marker_size, s_id, is_scaled=is_scaled)
+        star_object = subset_star_data(
+            s_x=s_x,
+            s_y=s_y,
+            bright_stars=bright_stars,
+            marker_size=marker_size,
+            s_id=s_id,
+            nx=image_dims[1],
+            ny=image_dims[0],
+        )
         good_sx_sub = star_object.stars_x
         good_sy_sub = star_object.stars_y
         good_markers_sub = star_object.markers
@@ -117,11 +120,13 @@ def run_alg(
 
         # FOR PLANETS/MOON:
         # ----------------
-        planet_locations = get_ccor_locations_sunpy(ccor_map, observation_time, wcs)
+        planet_locations = get_ccor_locations_sunpy(ccor_map=ccor_map, observation_time=observation_time, wcs=wcs)
 
         # FOR COMETS:
         # -----------
-        valid_pixels, get_comet, _ = get_comet_locations(comets, sun, ts, observer, t, wcs)
+        get_comet, _, valid_pixels = get_comet_locations(
+            comets=comets, sun=sun, ts=ts, observer=observer, observation_time=t, wcs=wcs
+        )
 
         # FILE OUTGEST:
         # -------------
@@ -155,7 +160,6 @@ def run_alg(
             image_frame_coords = make_figure.scale_coordinates(header["CRPIX1"], header["CRPIX2"])
             crpix1 = image_frame_coords.crpix1
             crpix2 = image_frame_coords.crpix2
-            scale_by = 2 if is_scaled else 1
 
             # If the image is binned, bin the vignetting data too.
             if data.shape[0] != vig_data.shape[0]:
@@ -163,21 +167,22 @@ def run_alg(
 
             # Generate figure for each time frame:
             make_figure.plot_figure(
-                data,
-                data_dict["date_obs"],
-                data_dict["date_end"],
-                vig_data,
-                comet_dict["comet_locs"],
-                comet_dict["comets"],
-                star_dict["stars"],
-                s_id,
-                good_markers_sub,
-                s_x,
-                s_y,
-                constellations,
-                planet_locations,
-                scale_by,
-                crpix1,
-                crpix2,
+                data=data,
+                date_obs=data_dict["date_obs"],
+                date_end=data_dict["date_end"],
+                vig_data=vig_data,
+                comet_locs=comet_dict["comet_locs"],
+                comet_name=comet_dict["comets"],
+                star_locs=star_dict["stars"],
+                star_ids=s_id,
+                star_marker_size=good_markers_sub,
+                all_star_x=s_x,
+                all_star_y=s_y,
+                constellations=constellations,
+                planet_locs=planet_locations,
+                crpix1=crpix1,
+                crpix2=crpix2,
+                naxis1=image_dims[1],
+                naxis2=image_dims[0],
                 save_figures=save_figures,
             )
