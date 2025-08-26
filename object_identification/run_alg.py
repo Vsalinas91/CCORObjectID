@@ -21,8 +21,8 @@ def do_processing(input_dir: str, generate_figures: bool = False, write_output_f
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--input_dir", type=str, required=True)
-    parser.add_argument("-f", "--gen_figures", type=bool, required=False)
-    parser.add_argument("-w", "--write_outputs", type=bool, required=False)
+    parser.add_argument("-write-figures", "--gen_figures", type=bool, required=False)
+    parser.add_argument("-write-output", "--write_outputs", type=bool, required=False)
 
     args = parser.parse_args()
     input_dir = args.input_dir
