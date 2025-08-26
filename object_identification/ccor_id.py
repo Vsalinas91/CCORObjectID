@@ -121,7 +121,7 @@ def run_alg(
 
         # FOR COMETS:
         # -----------
-        valid_pixels, get_comet, _ = get_comet_locations(comets, sun, ts, observer, t, wcs)
+        get_comet, _, valid_pixels = get_comet_locations(comets, sun, ts, observer, t, wcs)
 
         # FILE OUTGEST:
         # -------------
@@ -163,21 +163,21 @@ def run_alg(
 
             # Generate figure for each time frame:
             make_figure.plot_figure(
-                data,
-                data_dict["date_obs"],
-                data_dict["date_end"],
-                vig_data,
-                comet_dict["comet_locs"],
-                comet_dict["comets"],
-                star_dict["stars"],
-                s_id,
-                good_markers_sub,
-                s_x,
-                s_y,
-                constellations,
-                planet_locations,
-                scale_by,
-                crpix1,
-                crpix2,
+                data=data,
+                date_obs=data_dict["date_obs"],
+                date_end=data_dict["date_end"],
+                vig_data=vig_data,
+                comet_locs=comet_dict["comet_locs"],
+                comet_name=comet_dict["comets"],
+                star_locs=star_dict["stars"],
+                star_ids=s_id,
+                star_marker_size=good_markers_sub,
+                all_star_x=s_x,
+                all_star_y=s_y,
+                constellations=constellations,
+                planet_locs=planet_locations,
+                scaling=scale_by,
+                crpix1=crpix1,
+                crpix2=crpix2,
                 save_figures=save_figures,
             )
