@@ -22,6 +22,17 @@ The table below summarizes the objects that can currently be identified by the a
 | Comets    |:heavy_check_mark:|
 | Satellites| :x:              |
 
+## Running the algorithm
+To the run the algorithm:
+
+> python object_identification/run_alg.py -i /path/to/ccor1-l3/data/ -write-figures True -write-output True
+
+Where: 
+ * -i: input directory
+ * -write-figures: boolean to generate figures
+ * -write-output: boolean for generating output file containing object coordinates (units pixels)
+
+
 ## Future Work
 
 This code is still under active delopement with the following items as potential future tasks/updates or additions:
