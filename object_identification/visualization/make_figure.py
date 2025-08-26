@@ -143,7 +143,7 @@ def plot_figure(
     naxis1: int = 2048,
     naxis2: int = 1920,
     save_figures: bool = False,
-):
+) -> None:
     """
     Plot the L3 image along side the object map.
     """
