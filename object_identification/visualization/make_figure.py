@@ -149,7 +149,6 @@ def plot_figure(
     crpix2: int | float,
     naxis1: int,
     naxis2: int,
-    save_figures: bool = False,
 ) -> None:
     """
     Plot the L3 image along side the object map.

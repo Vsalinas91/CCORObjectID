@@ -30,9 +30,7 @@ logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 logger = logging.getLogger(__name__)
 
 
-def run_alg(
-    inputs: list[Any], generate_figures: bool = False, write_output_files: bool = True, save_figures: bool = False
-) -> None:
+def run_alg(inputs: list[Any], generate_figures: bool = False, write_output_files: bool = True) -> None:
     """
     Process CCOR L3 data to identify celestial objects within it's field of view (FOV).
 
@@ -184,5 +182,4 @@ def run_alg(
                 crpix2=crpix2,
                 naxis1=image_dims[1],
                 naxis2=image_dims[0],
-                save_figures=save_figures,
             )
