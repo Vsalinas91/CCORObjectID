@@ -1,11 +1,11 @@
 from skyfield.api import load, Star, load_file
 from skyfield.data import hipparcos, mpc, stellarium
-from skyfield.vectorlib import VectorFunction
+
+from .utils_dataclasses import GetStarsSubset, GetStarMags, GetReferenceBodies
 
 import os
 import logging
 
-from dataclasses import dataclass
 from typing import Any
 import numpy.typing as npt
 import pandas as pd
@@ -15,36 +15,6 @@ logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 logger = logging.getLogger(__name__)
 
 CURRENT_DIR = Path(__file__).parent.parent
-
-
-@dataclass(frozen=True, kw_only=True)
-class GetStarsSubset:
-    stars_x: npt.NDArray[Any]
-    stars_y: npt.NDArray[Any]
-    markers: npt.NDArray[Any]
-    stars_ids: npt.NDArray[Any]
-
-
-@dataclass(frozen=True, kw_only=True)
-class GetStarMags:
-    star_data: npt.NDArray[Any]
-    limiting_magnitude: float
-    bright_stars: npt.NDArray[Any]
-    magnitude: npt.NDArray[Any]
-    marker_size: npt.NDArray[Any]
-
-
-@dataclass(frozen=True, kw_only=True)
-class GetReferenceBodies:
-    earth: VectorFunction
-    sun: VectorFunction
-
-
-@dataclass(frozen=True, kw_only=True)
-class Stars4Plotting:
-    full_star_x: list[Any]
-    full_star_y: list[Any]
-    full_star_id: list[Any]
 
 
 def load_planetary_data() -> GetReferenceBodies:

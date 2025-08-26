@@ -6,12 +6,11 @@ import logging
 import matplotlib.pyplot as plt
 from matplotlib import colors
 from matplotlib.axes import Axes
-from matplotlib.collections import PathCollection
 from .color_map import ccor_blue
+from .plotting_dataclasses import ImageCenterData, CelestialBodyPlot, ConstellationData
 
 from typing import Any
 import numpy.typing as npt
-from dataclasses import dataclass
 from pathlib import Path
 import os
 
@@ -20,25 +19,6 @@ logger = logging.getLogger(__name__)
 
 ROOT_DIR = Path(__file__).parent.parent.parent
 CMAP = ccor_blue()
-
-
-@dataclass(frozen=True, kw_only=True)
-class ImageCenterData:
-    scaling: int
-    crpix1: int | float
-    crpix2: int | float
-
-
-@dataclass(frozen=True, kw_only=True)
-class CelestialBodyPlot:
-    body_plot: PathCollection | None
-    body_name: str | None
-
-
-@dataclass(frozen=True, kw_only=True)
-class ConstellationData:
-    get_const_name: list[Any]
-    get_const_lines: list[Any]
 
 
 def reduce_vignette(vig_data: npt.NDArray[Any], flip: int) -> npt.NDArray[Any]:

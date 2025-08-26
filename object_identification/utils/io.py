@@ -10,11 +10,11 @@ from astropy.time import Time
 from sunpy import map as smap
 from pathlib import Path
 
-from dataclasses import dataclass
 from typing import Any
 import numpy.typing as npt
 from skyfield.timelib import Timescale
 
+from .utils_dataclasses import GetData
 from .exceptions import CCORExitError
 
 # Supress data ingest warnings.
@@ -24,17 +24,6 @@ logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 logger = logging.getLogger(__name__)
 
 ROOT_DIR = Path(__file__).parent.parent
-
-
-@dataclass(frozen=True, kw_only=True)
-class GetData:
-    image_data: npt.NDArray[Any]
-    header: fits.Header
-    WCS: WCS
-    ccor_map: smap.GenericMap
-    time: Timescale
-    obs_time: str
-    end_time: str
 
 
 def read_input(input: str, ts: Timescale) -> GetData:
