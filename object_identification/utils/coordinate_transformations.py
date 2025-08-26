@@ -96,7 +96,6 @@ def get_comet_locations(
             & (comet_y > 0)
             & (distance.au < 1)
         ):
-            print(distance)
             get_comet.append(body)
             get_distance.append(distance)
             valid_pixels.append((comet_x, comet_y))
