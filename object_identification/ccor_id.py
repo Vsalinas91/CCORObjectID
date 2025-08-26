@@ -74,7 +74,7 @@ def run_alg(
     if generate_figures:
         vig_data = get_vignetting_func()
 
-    for f in inputs[:1]:  # 10]:
+    for f in inputs[:]:
         # Initialize dicts to store the data
         # recombine when writing to output file.
         star_dict = {}
@@ -98,7 +98,8 @@ def run_alg(
         # this is a special case for our L3 products as we failed to
         # scale CRPIX, CDELT for the L3 products - this ensures that issue is
         # handled if it is to arise.
-        is_scaled = check_metadata(header)
+        is_scaled = check_metadata(header["CRPIX1"])
+        scale_by = 2 if is_scaled else 1
 
         # FOR STARS:
         # -----------
@@ -117,11 +118,13 @@ def run_alg(
 
         # FOR PLANETS/MOON:
         # ----------------
-        planet_locations = get_ccor_locations_sunpy(ccor_map, observation_time, wcs)
+        planet_locations = get_ccor_locations_sunpy(ccor_map=ccor_map, observation_time=observation_time, wcs=wcs)
 
         # FOR COMETS:
         # -----------
-        get_comet, _, valid_pixels = get_comet_locations(comets, sun, ts, observer, t, wcs)
+        get_comet, _, valid_pixels = get_comet_locations(
+            comets=comets, sun=sun, ts=ts, observer=observer, observation_time=t, wcs=wcs
+        )
 
         # FILE OUTGEST:
         # -------------
@@ -155,7 +158,6 @@ def run_alg(
             image_frame_coords = make_figure.scale_coordinates(header["CRPIX1"], header["CRPIX2"])
             crpix1 = image_frame_coords.crpix1
             crpix2 = image_frame_coords.crpix2
-            scale_by = 2 if is_scaled else 1
 
             # If the image is binned, bin the vignetting data too.
             if data.shape[0] != vig_data.shape[0]:

@@ -3,10 +3,11 @@ import logging
 from pathlib import Path
 from typing import Any
 import numpy.typing as npt
+from matplotlib.typing import ColorType
+
 
 import numpy as np
 from skimage.measure import block_reduce
-from scipy.ndimage import gaussian_filter as gf
 
 import matplotlib.pyplot as plt
 from matplotlib import colors
@@ -49,25 +50,18 @@ def scale_coordinates(
     return ImageCenterData(scaling=scaling, crpix1=cx, crpix2=cy)
 
 
-def plot_celstial_body(
-    name: str, body_pixels: tuple[Any, Any], ax: Axes, naxis1: int, naxis2: int, scaling: int
-) -> CelestialBodyPlot:
+def plot_celstial_body(name: str, body_pixels: tuple[Any, Any], ax: Axes, color: ColorType) -> CelestialBodyPlot:
     """
     Plot any celestial body whose pixel locations are within the CCOR FOV.
     """
     body_plot = None
     body_name = None
     if len(body_pixels) >= 1:
-        if (
-            (body_pixels[0] > 0)
-            & (body_pixels[0] * scaling <= naxis1)
-            & (body_pixels[1] > 0)
-            & (body_pixels[1] * scaling <= naxis2)
-        ):
+        if body_pixels[0] is not None:
+            if name in ["Moon", "moon"]:
+                color = "w"
             body_name = name
-            body_plot = ax.scatter(
-                body_pixels[0] * scaling, body_pixels[1] * scaling, marker="o", color="w", s=200, edgecolor="w"
-            )
+            body_plot = ax.scatter(body_pixels[0], body_pixels[1], marker="o", color=color, s=200, edgecolor="w")
 
     return CelestialBodyPlot(body_plot=body_plot, body_name=body_name)
 
@@ -179,7 +173,7 @@ def plot_figure(
     # PLOT THE DATA and OVERLAY COMET
     # --------------------------------
     ax[0].pcolormesh(
-        np.ma.MaskedArray(gf(data, 1), mask=~(vig_data > 0.01)),
+        np.ma.MaskedArray(data, mask=~(vig_data > 0.01)),
         cmap=CMAP,
         norm=colors.PowerNorm(gamma=0.45, vmin=1e-12, vmax=5e-10),
     )
@@ -195,7 +189,12 @@ def plot_figure(
     comet_names = []
     for ncomet, p in enumerate(comet_locs):  # can be more than one, so iterate over them.
         comet_plot = ax[1].scatter(
-            (p[0] * scaling) + 25, (p[1] * scaling) + 21, marker="H", color=comet_cmap[ncomet], edgecolor="w", s=90
+            (p[0]) + 25,
+            (p[1]) + 21,
+            marker="H",
+            color=comet_cmap[ncomet],
+            edgecolor="w",
+            s=90,
         )
         comet_plots.append(comet_plot)
         comet_names.append(comet_name[ncomet])
@@ -215,8 +214,9 @@ def plot_figure(
     # Plot the planetary/lunar locations
     body_plots = []
     body_names = []
-    for planet_name, locs in planet_locs.items():
-        plot_planet = plot_celstial_body(planet_name, locs, ax[1], naxis1, naxis2, scaling)
+    planet_colors = plt.cm.jet(np.linspace(0, 1, len(planet_locs)))  # type: ignore[attr-defined]
+    for index, (planet_name, locs) in enumerate(planet_locs.items()):
+        plot_planet = plot_celstial_body(name=planet_name, body_pixels=locs, ax=ax[1], color=planet_colors[index])
         body_names.append(planet_name)
         body_plots.append(plot_planet.body_plot)
 
@@ -266,24 +266,22 @@ def plot_figure(
     ax[1].set_title("Object Map", fontsize=15)
     ax[0].set_title(f"CCOR-1: {date_obs}", fontsize=14)
 
-    plt.subplots_adjust(right=0.7)  # Adjust 'right' value as needed
-
     if save_figures:
-        save_figure(date_obs, date_end)
+        obs_time_fmt = date_obs.replace("-", "").replace(":", "").split(".")[0]
+        end_time_fmt = date_end.replace("-", "").replace(":", "").split(".")[0]
+        file_tstamp = f"s{obs_time_fmt}Z_e{end_time_fmt}Z"
+        out_dir = f"{obs_time_fmt.split('T')[0]}"
+
+        try:
+            os.makedirs(os.path.join(ROOT_DIR, f"figures/{out_dir}"), exist_ok=True)
+        except OSError:
+            logger.exception("Error creating data directory.")
+
+        plt.savefig(
+            os.path.join(ROOT_DIR, f"figures/{out_dir}/sci_ccor1-obj_g19_{file_tstamp}.png"),
+            dpi=150,
+            bbox_inches="tight",
+        )
+
+    plt.subplots_adjust(right=0.7)  # Adjust 'right' value as needed
     plt.show()
-
-
-def save_figure(obs_time: str, end_time: str) -> None:
-    obs_time_fmt = obs_time.replace("-", "").replace(":", "").split(".")[0]
-    end_time_fmt = end_time.replace("-", "").replace(":", "").split(".")[0]
-    file_tstamp = f"s{obs_time_fmt}Z_e{end_time_fmt}Z"
-    out_dir = f"{obs_time_fmt.split('T')[0]}"
-
-    try:
-        os.makedirs(os.path.join(ROOT_DIR, f"figures/{out_dir}"), exist_ok=True)
-    except OSError:
-        logger.exception("Error creating data directory.")
-
-    plt.savefig(
-        os.path.join(ROOT_DIR, f"figures/{out_dir}/sci_ccor1-obj_g19_{file_tstamp}.png"), dpi=150, bbox_inches="tight"
-    )
