@@ -65,27 +65,6 @@ def plot_celstial_body(name: str, body_pixels: tuple[Any, Any], ax: Axes, color:
     return CelestialBodyPlot(body_plot=body_plot, body_name=body_name)
 
 
-def setup_legends(
-    data: list[Any], names: npt.NDArray[Any] | list[Any], title: str, ypos: int | float, axis: Axes
-) -> None:
-    """
-    Routine to set up the object map legend.
-    """
-    legend = plt.legend(
-        data,
-        names,
-        bbox_to_anchor=(1.05, ypos),
-        loc="upper left",
-        borderaxespad=0.0,
-        facecolor="k",
-        labelcolor="w",
-        prop={"weight": "bold"},
-        title=title,
-    )
-    plt.setp(legend.get_title(), color="w", weight="bold")
-    axis.add_artist(legend)
-
-
 def plot_constellations(
     constellations: list[Any],
     star_ids: npt.NDArray[Any],
