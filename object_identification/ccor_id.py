@@ -15,7 +15,7 @@ from utils.retrieve_data import (
     get_star_magnitude_mask,
     load_constellation_data,
 )
-from utils.io import read_input, write_output, get_vignetting_func, check_metadata
+from utils.io import read_input, write_output, get_vignetting_func
 from utils.coordinate_transformations import (
     get_ccor_locations,
     get_ccor_locations_sunpy,
@@ -94,13 +94,6 @@ def run_alg(
         end_time = get_input_data.end_time
         image_dims = wcs.array_shape
         logger.info(f"Identifying objects for observing time: {observation_time}")
-
-        # Check if coordinates need scaling due to bad metadata:
-        # this is a special case for our L3 products as we failed to
-        # scale CRPIX, CDELT for the L3 products - this ensures that issue is
-        # handled if it is to arise.
-        is_scaled = check_metadata(header["CRPIX1"])
-        scale_by = 2 if is_scaled else 1
 
         # FOR STARS:
         # -----------
@@ -187,8 +180,9 @@ def run_alg(
                 all_star_y=s_y,
                 constellations=constellations,
                 planet_locs=planet_locations,
-                scaling=scale_by,
                 crpix1=crpix1,
                 crpix2=crpix2,
+                naxis1=image_dims[1],
+                naxis2=image_dims[0],
                 save_figures=save_figures,
             )
