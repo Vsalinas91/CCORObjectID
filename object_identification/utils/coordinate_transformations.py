@@ -1,3 +1,11 @@
+from typing import Any
+import numpy.typing as npt
+from skyfield.vectorlib import VectorFunction
+from astropy.wcs.wcs import WCS
+from sunpy.map.mapbase import GenericMap
+from pandas import DataFrame
+from skyfield.timelib import Timescale
+
 from astropy.coordinates import SkyCoord, get_body, EarthLocation
 from astropy.time import Time
 
@@ -6,21 +14,7 @@ from skyfield.data import mpc
 from skyfield.named_stars import named_star_dict
 import skyfield.api as sf
 
-from typing import Any
-import numpy.typing as npt
-from skyfield.vectorlib import VectorFunction
-from astropy.wcs.wcs import WCS
-from sunpy.map.mapbase import GenericMap
-from pandas import DataFrame
-from skyfield.timelib import Timescale
-from dataclasses import dataclass
-
-
-@dataclass(frozen=True, kw_only=True)
-class ObjectLocations:
-    s_x: npt.NDArray[Any]
-    s_y: npt.NDArray[Any]
-    object_distance: npt.NDArray[Any]
+from .utils_dataclasses import ObjectLocations
 
 
 def get_ccor_locations(

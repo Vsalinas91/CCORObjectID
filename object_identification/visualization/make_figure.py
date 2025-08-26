@@ -1,18 +1,20 @@
-from skimage.measure import block_reduce
-import numpy as np
-from scipy.ndimage import gaussian_filter as gf
+import os
 import logging
+from pathlib import Path
+from typing import Any
+import numpy.typing as npt
+
+import numpy as np
+from skimage.measure import block_reduce
+from scipy.ndimage import gaussian_filter as gf
 
 import matplotlib.pyplot as plt
 from matplotlib import colors
 from matplotlib.axes import Axes
+
 from .color_map import ccor_blue
 from .plotting_dataclasses import ImageCenterData, CelestialBodyPlot, ConstellationData
 
-from typing import Any
-import numpy.typing as npt
-from pathlib import Path
-import os
 
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 logger = logging.getLogger(__name__)

@@ -1,3 +1,12 @@
+import os
+import logging
+from pathlib import Path
+from typing import Any
+import numpy as np
+import numpy.typing as npt
+
+from skyfield.api import load
+from visualization import make_figure
 from utils.retrieve_data import (
     load_planetary_data,
     load_star_data,
@@ -16,15 +25,6 @@ from utils.coordinate_transformations import (
 )
 from utils.exceptions import CCORExitError
 
-from visualization import make_figure
-
-import os
-import logging
-from skyfield.api import load
-from pathlib import Path
-from typing import Any
-import numpy as np
-import numpy.typing as npt
 
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 logger = logging.getLogger(__name__)
