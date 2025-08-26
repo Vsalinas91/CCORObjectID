@@ -1,6 +1,8 @@
 import json
 import os
 import datetime
+import warnings
+
 
 from astropy.io import fits
 from astropy.wcs import WCS
@@ -14,6 +16,10 @@ import numpy.typing as npt
 from skyfield.timelib import Timescale
 
 from .exceptions import CCORExitError
+
+# Supress data ingest warnings.
+warnings.filterwarnings("ignore")
+
 
 ROOT_DIR = Path(__file__).parent.parent
 
