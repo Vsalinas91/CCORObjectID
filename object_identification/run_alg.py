@@ -11,7 +11,7 @@ def do_processing(
     data specified in the input_dir input argument on the command line.
     """
     # get files:
-    files = sorted(glob.glob(input_dir + "*.fits"))[1:2]
+    files = sorted(glob.glob(input_dir + "*.fits"))[38:39]
 
     # execute algorithm for input file stack:
     # try:
