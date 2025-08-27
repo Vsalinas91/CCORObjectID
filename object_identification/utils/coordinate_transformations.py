@@ -1,3 +1,6 @@
+import logging
+import os
+
 from typing import Any
 import numpy.typing as npt
 from skyfield.vectorlib import VectorFunction
@@ -15,6 +18,9 @@ from skyfield.named_stars import named_star_dict
 import skyfield.api as sf
 
 from .utils_dataclasses import ObjectLocations
+
+logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
+logger = logging.getLogger(__name__)
 
 
 def get_ccor_locations(
@@ -54,6 +60,7 @@ def get_ccor_locations_sunpy(ccor_map: GenericMap, observation_time: str, wcs: W
             & (body_pixel_y <= image_shape[0])
             & (body_pixel_y > 0)
         ):
+            logger.info(f"BODY: {key.capitalize()} within FOV.")
             planet_dict[key] = (float(body_pixel_x), float(body_pixel_y))
 
     return planet_dict
@@ -96,6 +103,7 @@ def get_comet_locations(
             & (comet_y > 0)
             & (distance.au < 1)
         ):
+            logger.info(f"COMET: {body} within FOV.")
             get_comet.append(body)
             get_distance.append(distance)
             valid_pixels.append((comet_x, comet_y))

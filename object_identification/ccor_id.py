@@ -95,11 +95,13 @@ def run_alg(inputs: list[Any], generate_figures: bool = False, write_output_file
 
         # FOR STARS:
         # -----------
+        logger.info("Getting star data from Hipparcos catalogue.")
         star_locations = get_ccor_locations(observer, t, wcs, star_data)
         # All stars
         s_x = star_locations.s_x
         s_y = star_locations.s_y
         # Now subset to the field of view only:
+        logger.info("Acquiring stars within CCOR FOV at observation time.")
         star_object = subset_star_data(
             s_x=s_x,
             s_y=s_y,
@@ -115,19 +117,23 @@ def run_alg(inputs: list[Any], generate_figures: bool = False, write_output_file
         good_star_ids = star_object.stars_ids
         # Get the star names from their ids:
         good_star_names = get_star_names(good_star_ids)
+        logger.info(f"{len(good_sx_sub)} stars within FOV with magnitude > 7.")
 
         # FOR PLANETS/MOON:
         # ----------------
+        logger.info("Getting planet(s)/moon within FOV.")
         planet_locations = get_ccor_locations_sunpy(ccor_map=ccor_map, observation_time=observation_time, wcs=wcs)
 
         # FOR COMETS:
         # -----------
+        logger.info("Getting comet(s) within FOV.")
         get_comet, _, valid_pixels = get_comet_locations(
             comets=comets, sun=sun, ts=ts, observer=observer, observation_time=t, wcs=wcs
         )
 
         # FILE OUTGEST:
         # -------------
+        logger.info("Building data dict for file outgest.")
         # Append the data
         comet_dict["comets"] = get_comet
         comet_dict["comet_locs"] = valid_pixels
@@ -147,6 +153,7 @@ def run_alg(inputs: list[Any], generate_figures: bool = False, write_output_file
 
         if write_output_files:
             try:
+                logger.info("Writing to file.")
                 write_output(observation_time, end_time, combined_dict)
             except CCORExitError:
                 logger.exception("Cannot produce output file.")
@@ -154,6 +161,7 @@ def run_alg(inputs: list[Any], generate_figures: bool = False, write_output_file
         # PLOT IF TOGGLED:
         # ------------------
         if generate_figures:
+            logger.info("Generting object map figure(s).")
             current_image_yaw_state = set_image_yaw_state(header["YAWFLIP"])
             image_frame_coords = scale_coordinates(header["CRPIX1"], header["CRPIX2"])
             crpix1 = image_frame_coords.crpix1
