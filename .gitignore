@@ -4,3 +4,4 @@
 outputs/
 figures/
 object_identification/run_alg.py
+object_identification/static_required/vig_ccor1_20250209.fits
