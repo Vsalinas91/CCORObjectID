@@ -1,10 +1,17 @@
 # CCOR Object Identification
-CCOR imagery are captured in visible white light which means that celestial bodies and objects that transit through the instrument's field-of-view (FOV) are visible in the image data. Such objects include planets, the moon, comets, and even satellites since CCOR-1 is in geostationary orbit on-board GOES-19.
+CCOR imagery often contains artifcats that may correspond to celestial bodies and objects that transit through the its field-of-view (FOV). Such objects include planets, the moon, comets, and even satellites, since CCOR-1 is at geostationary orbit on-board GOES-19.
 
-The object identification routines found in this repository allow for the successful identification of celestial objects in any valid CCOR-1 image data file, namely level 3 downsampled data due to smaller file sizes using various ephemeris data sources all handled by the `SkyField` python package which is included as a dependency in the `environment.yml` file. 
+This object identification algorithm allows for identifying known celestial objects in any valid CCOR-1 image data file, namely level 3 downsampled data due to smaller file sizes. The algorithm uses the `SkyField` package to ingest ephemeris data from various sources listed below:
 
-Object identification relies on valid CCOR product metadata, namely the observation time of the image capture. The include ephemeris data are used to determine the location(s) of celestial bodies/objects at the observation time and relative the CCOR world coordinate system (WCS).
+ 1. Celestrak (or Space-Track for archive) - Earth satellite two-line element (TLE) objects.
+ 2. Minor Planet Center (MPC) - For comet orbital ephemeris data (may also use for obtaining astroids).
+ 3. JPL Horizons - planet/spacecraft SPICE Kernels.
 
+These data, along with the CCOR ephemeris contained in the product metadata, are used to identify locations of objects within the image data based entirely off the observing time of the image capture.
+
+Note: Object identification relies on valid CCOR product metadata, namely the observation time of the image capture. The include ephemeris data are used to determine the location(s) of celestial bodies/objects at the observation time and relative the CCOR world coordinate system (WCS).
+
+# Current Identifiable Objects
 The table below summarizes the objects that can currently be identified by the algorithm, and their locations (in units pixels) written to output files and overlaid onto the CCOR imagery for reference (or projected onto a reference object map).
 
 | Object  | Identification |
