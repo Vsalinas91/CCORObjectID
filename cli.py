@@ -10,8 +10,8 @@ logger = logging.getLogger(__name__)
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--input_dir", type=str, required=True)
-    parser.add_argument("-f", "--gen_figures", type=bool, required=False)
-    parser.add_argument("-w", "--write_outputs", type=bool, required=False)
+    parser.add_argument("-f", "--gen_figures", action="store_true")
+    parser.add_argument("-w", "--write_outputs", action="store_true")
 
     args = parser.parse_args()
     input_dir = args.input_dir

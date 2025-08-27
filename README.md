@@ -32,12 +32,12 @@ The table below summarizes the objects that can currently be identified by the a
 ## Running the algorithm
 To the run the algorithm:
 
-> python object_identification/run_alg.py -i /path/to/ccor1-l3/data/ -write-figures True -write-output True
+> python -m cli -i /path/to/ccor1-l3/data/ -f -w
 
 Where: 
- * -i: input directory
- * -write-figures: boolean to generate figures
- * -write-output: boolean for generating output file containing object coordinates (units pixels)
+ * -i (--input_dir): input directory
+ * -f (--gen_figures): boolean to generate figures (True if set)
+ * -w (--write_outputs): boolean for generating output file containing object coordinates (True if set)
 
 
 ## Future Work
