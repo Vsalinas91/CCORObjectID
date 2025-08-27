@@ -54,3 +54,10 @@ class ObjectLocations:
     s_x: npt.NDArray[Any]
     s_y: npt.NDArray[Any]
     object_distance: npt.NDArray[Any]
+
+
+@dataclass(frozen=True, kw_only=True)
+class ObserverLocation:
+    lon: float
+    lat: float
+    height: float

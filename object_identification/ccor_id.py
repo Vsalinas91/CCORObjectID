@@ -22,6 +22,7 @@ from .utils.coordinate_transformations import (
     get_comet_locations,
     get_star_names,
     get_ccor_observer,
+    get_observer_subpoint,
 )
 from .utils.exceptions import CCORExitError
 
@@ -64,9 +65,6 @@ def run_alg(inputs: list[Any], generate_figures: bool = False, write_output_file
     # Get constellation data (contains names, and connecting star edges, or star catalogue IDs):
     constellations = load_constellation_data()
 
-    # Define the observer (approximate from GEO location for G19):
-    observer = get_ccor_observer(earth)
-
     # Get the vignetting function for masking out the pylon/occulter disc
     # in the object map.
     if generate_figures:
@@ -92,6 +90,20 @@ def run_alg(inputs: list[Any], generate_figures: bool = False, write_output_file
         end_time = get_input_data.end_time
         image_dims = wcs.array_shape
         logger.info(f"Identifying objects for observing time: {observation_time}")
+
+        # Define the observer (approximate from GEO location for G19 if observer_geo is not set.):
+        try:
+            observer_geo = get_observer_subpoint(
+                observation_time, header["EPHVEC_X"], header["EPHVEC_Y"], header["EPHVEC_Z"]
+            )
+        except KeyError:
+            logger.error(
+                "Invalid key in header for ephemeris positions. Make sure to map correct keys to function call."
+            )
+            continue
+        logger.info(f"Observer subpoint (lon, lat): {observer_geo.lon}, {observer_geo.lat}")
+        # make locs negative since skyfield uses positive values for western hemisphere.
+        observer = get_ccor_observer(earth, -observer_geo.lat, -observer_geo.lon)
 
         # FOR STARS:
         # -----------
