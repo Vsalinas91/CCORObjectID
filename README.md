@@ -39,6 +39,8 @@ Where:
  * -f (--gen_figures): boolean to generate figures (True if set)
  * -w (--write_outputs): boolean for generating output file containing object coordinates (True if set)
 
+ Note: the CCOR vignetting file needs to be placed in the `static_required` directory as it is not available in this repository.
+
 
 ## Future Work
 
