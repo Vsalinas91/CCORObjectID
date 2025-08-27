@@ -9,7 +9,9 @@ from sunpy.map.mapbase import GenericMap
 from pandas import DataFrame
 from skyfield.timelib import Timescale
 
-from astropy.coordinates import SkyCoord, get_body, EarthLocation
+from astropy.coordinates import SkyCoord, get_body, EarthLocation, ITRS, CartesianRepresentation
+from sunpy.coordinates.frames import GeocentricEarthEquatorial
+import astropy.units as u
 from astropy.time import Time
 
 from skyfield.constants import GM_SUN_Pitjeva_2005_km3_s2 as GM_SUN
@@ -17,7 +19,7 @@ from skyfield.data import mpc
 from skyfield.named_stars import named_star_dict
 import skyfield.api as sf
 
-from .utils_dataclasses import ObjectLocations
+from .utils_dataclasses import ObjectLocations, ObserverLocation
 
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 logger = logging.getLogger(__name__)
@@ -129,10 +131,45 @@ def hip_id_to_star_name(star_id: int | float) -> list[str]:
     return [name for name, hip_id in named_star_dict.items() if star_id == hip_id]
 
 
-def get_ccor_observer(earth: VectorFunction) -> VectorFunction:
+def get_ccor_observer(
+    earth: VectorFunction, observer_latitude: float | None, observer_longitude: float | None
+) -> VectorFunction:
     """
     Define the observer location to do the coordinate transformations.
     """
-    observer_latitude = 0
-    observer_longitude = 75.2
+    if observer_longitude is None:
+        logger.warning("Setting location to expected CCOR-1 slot.")
+        observer_latitude = 0
+        observer_longitude = 75.2
+
     return earth + sf.wgs84.latlon(observer_latitude, observer_longitude)
+
+
+def get_observer_subpoint(
+    date_obs: str, sc_locx: int | float, sc_locy: int | float, sc_locz: int | float
+) -> ObserverLocation:
+    """
+    Transform the spacecraft ephemeris position vector into
+    earth-centered earth-fixed (ECEF) coordinates (i.e., OBSGEO).
+
+    Note: spacecraft position vector in units km (EME2000)
+    """
+    # Create time object:
+    date_obs = Time(date_obs, format="isot", scale="utc")
+    # Get geocentric earth equatorial:
+    gee_coords = SkyCoord(
+        CartesianRepresentation(x=sc_locx, y=sc_locy, z=sc_locz, unit=u.m),
+        frame=GeocentricEarthEquatorial(obstime=date_obs),
+    )
+    # Now transform to OBSGEO:
+    itrs_coords = gee_coords.transform_to(ITRS(obstime=date_obs, representation_type="cartesian"))
+    ecef_coords = itrs_coords.earth_location.to("m")
+
+    el = EarthLocation.from_geocentric(ecef_coords.x, ecef_coords.y, ecef_coords.z, unit="m")
+    geo_loc = el.to_geodetic()
+
+    lon = ((geo_loc.lon.to(u.deg).value + 180) % 360) - 180
+    lat = geo_loc.lat.to(u.deg).value
+    height = geo_loc.height.value  # meters
+
+    return ObserverLocation(lon=lon, lat=lat, height=height)
