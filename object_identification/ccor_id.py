@@ -92,9 +92,15 @@ def run_alg(inputs: list[Any], generate_figures: bool = False, write_output_file
         logger.info(f"Identifying objects for observing time: {observation_time}")
 
         # Define the observer (approximate from GEO location for G19 if observer_geo is not set.):
-        observer_geo = get_observer_subpoint(
-            observation_time, header["EPHVEC_X"], header["EPHVEC_Y"], header["EPHVEC_Z"]
-        )
+        try:
+            observer_geo = get_observer_subpoint(
+                observation_time, header["EPHVEC_X"], header["EPHVEC_Y"], header["EPHVEC_Z"]
+            )
+        except KeyError:
+            logger.error(
+                "Invalid key in header for ephemeris positions. Make sure to map correct keys to function call."
+            )
+            continue
         logger.info(f"Observer subpoint (lon, lat): {observer_geo.lon}, {observer_geo.lat}")
         # make locs negative since skyfield uses positive values for western hemisphere.
         observer = get_ccor_observer(earth, -observer_geo.lat, -observer_geo.lon)
