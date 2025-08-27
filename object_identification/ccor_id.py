@@ -6,8 +6,8 @@ import numpy as np
 import numpy.typing as npt
 
 from skyfield.api import load
-from visualization import make_figure
-from utils.retrieve_data import (
+from .visualization.make_figure import plot_figure, set_image_yaw_state, scale_coordinates, reduce_vignette
+from .utils.retrieve_data import (
     load_planetary_data,
     load_star_data,
     load_comet_data,
@@ -15,15 +15,15 @@ from utils.retrieve_data import (
     get_star_magnitude_mask,
     load_constellation_data,
 )
-from utils.io import read_input, write_output, get_vignetting_func
-from utils.coordinate_transformations import (
+from .utils.io import read_input, write_output, get_vignetting_func
+from .utils.coordinate_transformations import (
     get_ccor_locations,
     get_ccor_locations_sunpy,
     get_comet_locations,
     get_star_names,
     get_ccor_observer,
 )
-from utils.exceptions import CCORExitError
+from .utils.exceptions import CCORExitError
 
 
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
@@ -154,17 +154,17 @@ def run_alg(inputs: list[Any], generate_figures: bool = False, write_output_file
         # PLOT IF TOGGLED:
         # ------------------
         if generate_figures:
-            current_image_yaw_state = make_figure.set_image_yaw_state(header["YAWFLIP"])
-            image_frame_coords = make_figure.scale_coordinates(header["CRPIX1"], header["CRPIX2"])
+            current_image_yaw_state = set_image_yaw_state(header["YAWFLIP"])
+            image_frame_coords = scale_coordinates(header["CRPIX1"], header["CRPIX2"])
             crpix1 = image_frame_coords.crpix1
             crpix2 = image_frame_coords.crpix2
 
             # If the image is binned, bin the vignetting data too.
             if data.shape[0] != vig_data.shape[0]:
-                vig_data = make_figure.reduce_vignette(vig_data, current_image_yaw_state)
+                vig_data = reduce_vignette(vig_data, current_image_yaw_state)
 
             # Generate figure for each time frame:
-            make_figure.plot_figure(
+            plot_figure(
                 data=data,
                 date_obs=data_dict["date_obs"],
                 date_end=data_dict["date_end"],
