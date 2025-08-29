@@ -201,7 +201,6 @@ def get_satellites_in_fov(
     all_sat_coords,
     all_sat_names,
     all_sat_pos,
-    goes_sat_coord,
     fov_angle=11,
     radius_search=30e3,
 ):
@@ -245,7 +244,6 @@ def get_satellites_in_fov(
         # Get the CCOR, SUN, and [optional] GOES19 positions
         ccor_coord = all_ccor_coords[tidx]
         sun_coord = all_sun_coords[tidx]
-        # g19_coord = goes_sat_coord[tidx].cartesian.xyz.to(u.km).to_value()
 
         ccor_x = ccor_coord[0]
         ccor_y = ccor_coord[1]
@@ -254,13 +252,6 @@ def get_satellites_in_fov(
         sunx = sun_coord[0]
         suny = sun_coord[1]
         sunz = sun_coord[2]
-
-        # g19x =  g19_coord[0]
-        # g19y =  g19_coord[1]
-        # g19z =  g19_coord[2]
-        # ccor_x = g19x
-        # ccor_y = g19y
-        # ccor_z = g19z
 
         # Iterate over the satellites for each time
         for id, ss, sat_pos in zip(all_sat_names[tidx], all_sat_coords[tidx], all_sat_pos[tidx]):
