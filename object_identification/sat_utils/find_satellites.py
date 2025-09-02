@@ -1,19 +1,58 @@
+import os
+import logging
+from dataclasses import dataclass
+from typing import Any
+import numpy.typing as npt
+from skyfield.vectorlib import VectorFunction
+from sunpy.map.mapbase import GenericMap
+
 import numpy as np
 from astropy.coordinates import SkyCoord, CartesianRepresentation
 import astropy.units as u
-from astropy.coordinates import TEME, CartesianDifferential, ITRS  # noqa: F401
-from sunpy.coordinates import frames  # noqa: F401
 
-from position_transformations import (
-    get_angle,
-    get_angular_positions,
-)
+from . import position_transformations
+
+get_angle = position_transformations.get_angle
+get_angular_positions = position_transformations.get_angular_positions
+
+logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
+logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True, kw_only=True)
+class GetAllSatellites:
+    all_sat_names: npt.NDArray[Any]  # catalogue sattelite names in TLE
+    all_sat_coords: npt.NDArray[Any]  # coordinates/positions of satellites
+    all_sun_coords: npt.NDArray[Any]  # sun coordinates at obstime
+    all_ccor_coords: npt.NDArray[Any]  # ccor coordinates at obstime
+    all_earth_coords: npt.NDArray[Any]  # earth coordinates at obstime
+    all_sat_pos: npt.NDArray[Any]  # satellite positions (VectorFunction) objects
+    goes_sat_coords: npt.NDArray[Any]  # GOES-19 satellite coords
+
+
+@dataclass(frozen=True, kw_only=True)
+class GetCandidateSatellites:
+    get_angle_in_fov: list[Any]  # satellite-sun angle (similar to sun-earth, and/or sun-moon)
+    get_dist: list[Any]  # distance from satellite to observer
+    get_sat_id: list[Any]  # satellite ids within FOV
+    get_tlabel: list[Any]  # time labels for mapping values/locations to corresponding time stamp
+    get_angle_locs: list[Any]  # approximation to 2D locations of satellite in FOV/image
+    get_sat_collection: list[Any]  # satellite vector function objects for valid satellites
+    get_sat_pos: list[Any]  # satellite vector positions for reference
 
 
 ##########################################################################
 # We Want the Positions for All possible Times During the Image Capture: #
 ##########################################################################
-def get_all_positions_for_times(astro_times, j_times, earth, sun, ccor_map, valid_sat, use_gcrs=False):
+def get_all_positions_for_times(
+    astro_times: list[Any],
+    j_times: list[Any],
+    earth: VectorFunction,
+    sun: VectorFunction,
+    ccor_map: GenericMap,
+    valid_sat: list[Any],
+    use_gcrs: bool = False,
+) -> GetAllSatellites:
     """
     Get the Sun, CCOR, Earth, and satellite positions for
     all times reported in a CCOR data product file's header.
@@ -59,6 +98,7 @@ def get_all_positions_for_times(astro_times, j_times, earth, sun, ccor_map, vali
 
     # Iterate over the file times:
     for at, t in zip(astro_times, j_times):
+        logger.info(f"Getting satellite data for time: {at.isot}")
 
         # Get Earth and Sun Locations at Observation Time
         # ---------------------------------------------
@@ -159,7 +199,7 @@ def get_all_positions_for_times(astro_times, j_times, earth, sun, ccor_map, vali
         az = np.arctan2((ccor_y - suny), (ccor_x - sunx))  # 180 - az in degrees if plotting grid
         el = np.arccos((ccor_z - sunz) / pos)  # also needs to be adjusted if plotting  # noqa: F841
         sc_angle = np.rad2deg(np.arccos((sunz - ccor_z) / pos))  # angle to sun's position
-        print(
+        logger.info(
             f"Sun is at an inclination angle of {sc_angle} from "
             + f"x-axis at time {t.utc_datetime()} and {az} from horizontal."
         )
@@ -171,39 +211,30 @@ def get_all_positions_for_times(astro_times, j_times, earth, sun, ccor_map, vali
         all_earth_coords.append((earx, eary, earz))
         all_sat_pos.append(sat_pos)
 
-    # Prep the coordinate arrays for finding the closest positions by making them into arrays.
-    # For each Fits file all time stamps will be checked, so 3xN_satellites
-    all_sat_names = np.array(all_sat_names)
-    all_sat_coords = np.array(all_sat_coords)
-    all_sun_coords = np.array(all_sun_coords)
-    all_ccor_coords = np.array(all_ccor_coords)
-    all_earth_coords = np.array(all_earth_coords)
-    all_sat_pos = np.array(all_sat_pos)
-
     # Find goes position:
-    goes_sat_coord = all_sat_coords[np.where(all_sat_names == "GOES 19")]
+    goes_sat_coord = np.array(all_sat_coords)[np.where(np.array(all_sat_names) == "GOES 19")]
 
-    return (
-        all_sat_names,
-        all_sat_coords,
-        all_sun_coords,
-        all_ccor_coords,
-        all_earth_coords,
-        all_sat_pos,
-        goes_sat_coord,
+    return GetAllSatellites(
+        all_sat_names=np.array(all_sat_names),
+        all_sat_coords=np.array(all_sat_coords),
+        all_sun_coords=np.array(all_sun_coords),
+        all_ccor_coords=np.array(all_ccor_coords),
+        all_earth_coords=np.array(all_earth_coords),
+        all_sat_pos=np.array(all_sat_pos),
+        goes_sat_coords=np.array(goes_sat_coord),
     )
 
 
 def get_satellites_in_fov(
-    tlabels,
-    all_ccor_coords,
-    all_sun_coords,
-    all_sat_coords,
-    all_sat_names,
-    all_sat_pos,
-    fov_angle=11,
-    radius_search=30e3,
-):
+    tlabels: list[Any],
+    all_ccor_coords: npt.NDArray[Any],
+    all_sun_coords: npt.NDArray[Any],
+    all_sat_coords: npt.NDArray[Any],
+    all_sat_names: npt.NDArray[Any],
+    all_sat_pos: npt.NDArray[Any],
+    fov_angle: int | float = 11,
+    radius_search: int | float = 30e3,
+) -> GetCandidateSatellites:
     """
     Identify all satellites in the CCOR FOV within 11 degrees of the boresight and
     retrieve their cartesian locations, angular positions from the boresight, distances from
@@ -219,13 +250,12 @@ def get_satellites_in_fov(
        - get_sat_collation = get satellites locations within the search radius
     """
     # Initialize arrays of type object to store lists of varying sizes
-    get_angle_in_fov = np.zeros([len(tlabels)], dtype="object")
-    # get_pix_locs = np.zeros([len(tlabels)], dtype='object')
-    get_dist = np.zeros([len(tlabels)], dtype="object")
-    get_sat_id = np.zeros([len(tlabels)], dtype="object")
-    get_tlabel = np.zeros([len(tlabels)], dtype="object")
-    get_angle_locs = np.zeros([len(tlabels)], dtype="object")
-    get_sat_pos = np.zeros([len(tlabels)], dtype="object")
+    get_angle_in_fov = []  # np.zeros([len(tlabels)], dtype="object")
+    get_dist = []  # np.zeros([len(tlabels)], dtype="object")
+    get_sat_id = []  # np.zeros([len(tlabels)], dtype="object")
+    get_tlabel = []  # np.zeros([len(tlabels)], dtype="object")
+    get_angle_locs = []  # np.zeros([len(tlabels)], dtype="object")
+    get_sat_pos = []  # np.zeros([len(tlabels)], dtype="object")
     get_sat_collection = []
 
     # Iterate over all 3 timestamps in CCOR file:
@@ -234,7 +264,6 @@ def get_satellites_in_fov(
         get_close_points = []
         get_close_ids = []
         valid_angles = []
-        valid_locs = []  # noqa: F841
         valid_ids = []
         valid_tlabel = []
         valid_dists = []
@@ -286,14 +315,6 @@ def get_satellites_in_fov(
                         np.array([xrel, yrel, zrel]), np.array([ccor_x, ccor_y, ccor_z]), np.array([sunx, suny, sunz])
                     )
 
-                    # Get approximate Pixel locations: [no fully tested]
-                    # locs = get_ortho_angle(
-                    #     np.array([xrel, yrel, zrel]),
-                    #     np.array([ccor_x, ccor_y, ccor_z]),
-                    #     np.array([sunx, suny, sunz]),
-                    #     header['YAWFLIP']
-                    # )
-
                     angular_locs = get_angular_positions(
                         np.array([xrel, yrel, zrel]),
                         np.array([ccor_x, ccor_y, ccor_z]),
@@ -312,24 +333,31 @@ def get_satellites_in_fov(
                         valid_ids.append(id)
                         valid_dists.append(spos)
                         valid_tlabel.append(tlabels[tidx])
-                        valid_angle_locs.append(angular_locs)
+                        valid_angle_locs.append((angular_locs[0].tolist(), angular_locs[1].tolist()))
                         valid_sat_pos.append(sat_pos)
-                        print(
+                        logger.info(
                             f"{id} has a SAT_ANGLE of {sat_angle} from the boresight | Angular Locations (x, y):"
                             + f" {angular_locs} | Distance from CCOR is {spos} km."
                         )
 
         # Store in lists
-        get_angle_in_fov[tidx] = valid_angles
-        # get_pix_locs[tidx] = (valid_locs)
-        get_dist[tidx] = valid_dists
-        get_sat_id[tidx] = valid_ids
-        get_tlabel[tidx] = valid_tlabel
-        get_angle_locs[tidx] = valid_angle_locs
+        get_angle_in_fov.append(valid_angles)
+        get_dist.append(valid_dists)
+        get_sat_id.append(valid_ids)
+        get_tlabel.append(valid_tlabel)
+        get_angle_locs.append(valid_angle_locs)
         get_sat_collection.append(get_close_points)
-        get_sat_pos[tidx] = valid_sat_pos
+        get_sat_pos.append(valid_sat_pos)
 
-    return (get_angle_in_fov, get_dist, get_sat_id, get_tlabel, get_angle_locs, get_sat_collection, get_sat_pos)
+    return GetCandidateSatellites(
+        get_angle_in_fov=get_angle_in_fov,
+        get_dist=get_dist,
+        get_sat_id=get_sat_id,
+        get_tlabel=get_tlabel,
+        get_angle_locs=get_angle_locs,
+        get_sat_collection=get_sat_collection,
+        get_sat_pos=get_sat_pos,
+    )
 
 
 def create_cone_mask(shape, center, radius, height, angle, direction, grid):
