@@ -138,7 +138,7 @@ def run_alg(inputs: list[Any], generate_figures: bool = False, write_output_file
         logger.info("Getting comet(s) within FOV.")
         get_comets = get_comet_locations(comets=comets, sun=sun, ts=ts, observer=observer, observation_time=t, wcs=wcs)
         get_comet = get_comets.get_comet
-        valid_pixels = get_comet.valid_pixels
+        valid_pixels = get_comets.valid_pixels
         # FILE OUTGEST:
         # -------------
         logger.info("Building data dict for file outgest.")
