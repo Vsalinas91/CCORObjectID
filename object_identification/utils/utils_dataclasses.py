@@ -61,3 +61,10 @@ class ObserverLocation:
     lon: float
     lat: float
     height: float
+
+
+@dataclass(frozen=True, kw_only=True)
+class CometLocations:
+    get_comet: list[Any]
+    get_distance: list[Any]
+    valid_pixels: list[Any]
