@@ -92,9 +92,7 @@ def run_alg(inputs: list[Any], generate_figures: bool = False, write_output_file
 
         # Define the observer (approximate from GEO location for G19 if observer_geo is not set.):
         try:
-            observer_geo = get_observer_subpoint(
-                observation_time, header["EPHVEC_X"], header["EPHVEC_Y"], header["EPHVEC_Z"]
-            )
+            observer_geo = get_observer_subpoint(observation_time, ccor_map.observer_coordinate)
         except KeyError:
             logger.error(
                 "Invalid key in header for ephemeris positions. Make sure to map correct keys to function call."

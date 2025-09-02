@@ -9,8 +9,7 @@ from sunpy.map.mapbase import GenericMap
 from pandas import DataFrame
 from skyfield.timelib import Timescale
 
-from astropy.coordinates import SkyCoord, get_body, EarthLocation, ITRS, CartesianRepresentation
-from sunpy.coordinates.frames import GeocentricEarthEquatorial
+from astropy.coordinates import SkyCoord, get_body, EarthLocation, ITRS
 import astropy.units as u
 from astropy.time import Time
 
@@ -149,9 +148,7 @@ def get_ccor_observer(
     return earth + sf.wgs84.latlon(observer_latitude, observer_longitude)
 
 
-def get_observer_subpoint(
-    date_obs: str, sc_locx: int | float, sc_locy: int | float, sc_locz: int | float
-) -> ObserverLocation:
+def get_observer_subpoint(date_obs: str, observer: SkyCoord) -> ObserverLocation:
     """
     Transform the spacecraft ephemeris position vector into
     earth-centered earth-fixed (ECEF) coordinates (i.e., OBSGEO).
@@ -160,16 +157,13 @@ def get_observer_subpoint(
     """
     # Create time object:
     date_obs = Time(date_obs, format="isot", scale="utc")
-    # Get geocentric earth equatorial:
-    gee_coords = SkyCoord(
-        CartesianRepresentation(x=sc_locx, y=sc_locy, z=sc_locz, unit=u.m),
-        frame=GeocentricEarthEquatorial(obstime=date_obs),
+    # Transform observer coordinate to ITRS -> ECEF (geocentric)
+    observer_itrs = observer.transform_to(ITRS(obstime=date_obs, representation_type="cartesian"))
+    observer_ecef = observer_itrs.earth_location.to("m")
+    # Get Earth Location
+    el = EarthLocation.from_geocentric(
+        observer_ecef.x.value * u.m, observer_ecef.y.value * u.m, observer_ecef.z.value * u.m, unit="m"
     )
-    # Now transform to OBSGEO:
-    itrs_coords = gee_coords.transform_to(ITRS(obstime=date_obs, representation_type="cartesian"))
-    ecef_coords = itrs_coords.earth_location.to("m")
-
-    el = EarthLocation.from_geocentric(ecef_coords.x, ecef_coords.y, ecef_coords.z, unit="m")
     geo_loc = el.to_geodetic()
 
     lon = ((geo_loc.lon.to(u.deg).value + 180) % 360) - 180
