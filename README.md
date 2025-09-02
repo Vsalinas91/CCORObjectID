@@ -30,14 +30,24 @@ The table below summarizes the objects that can currently be identified by the a
 | Satellites| :x:              |
 
 ## Running the algorithm
-To the run the algorithm:
+To the run the object identification algorithm:
 
-> python -m cli -i /path/to/ccor1-l3/data/ -f -w
+> python -m cli -f -w -i /path/to/ccor1-l3/data/ 
 
 Where: 
  * -i (--input_dir): input directory
  * -f (--gen_figures): boolean to generate figures (True if set)
  * -w (--write_outputs): boolean for generating output file containing object coordinates (True if set)
+
+To run the satellite identification algorithm:
+
+> python -m cli --search_radius 30e3 --fov_angle 11.0 -i /path/to/ccor1-l3/data/ -tle /path/to/tle/data.tle
+
+Where:
+ * --search_radius: search radius for identifying candidate satellites near the instrument/observer in units km
+ * --fov_angle: instrument's FOV in units degrees
+ * -tle: path to TLE (.tle) data file corresponding to the date for the date found in --input_dir.
+
 
  Note: the CCOR vignetting file needs to be placed in the `static_required` directory as it is not available in this repository.
 
