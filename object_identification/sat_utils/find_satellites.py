@@ -32,13 +32,13 @@ class GetAllSatellites:
 
 @dataclass(frozen=True, kw_only=True)
 class GetCandidateSatellites:
-    get_angle_in_fov: npt.NDArray[Any]  # satellite-sun angle (similar to sun-earth, and/or sun-moon)
-    get_dist: npt.NDArray[Any]  # distance from satellite to observer
-    get_sat_id: npt.NDArray[Any]  # satellite ids within FOV
-    get_tlabel: npt.NDArray[Any]  # time labels for mapping values/locations to corresponding time stamp
-    get_angle_locs: npt.NDArray[Any]  # approximation to 2D locations of satellite in FOV/image
+    get_angle_in_fov: list[Any]  # satellite-sun angle (similar to sun-earth, and/or sun-moon)
+    get_dist: list[Any]  # distance from satellite to observer
+    get_sat_id: list[Any]  # satellite ids within FOV
+    get_tlabel: list[Any]  # time labels for mapping values/locations to corresponding time stamp
+    get_angle_locs: list[Any]  # approximation to 2D locations of satellite in FOV/image
     get_sat_collection: list[Any]  # satellite vector function objects for valid satellites
-    get_sat_pos: npt.NDArray[Any]  # satellite vector positions for reference
+    get_sat_pos: list[Any]  # satellite vector positions for reference
 
 
 ##########################################################################
@@ -250,12 +250,12 @@ def get_satellites_in_fov(
        - get_sat_collation = get satellites locations within the search radius
     """
     # Initialize arrays of type object to store lists of varying sizes
-    get_angle_in_fov = np.zeros([len(tlabels)], dtype="object")
-    get_dist = np.zeros([len(tlabels)], dtype="object")
-    get_sat_id = np.zeros([len(tlabels)], dtype="object")
-    get_tlabel = np.zeros([len(tlabels)], dtype="object")
-    get_angle_locs = np.zeros([len(tlabels)], dtype="object")
-    get_sat_pos = np.zeros([len(tlabels)], dtype="object")
+    get_angle_in_fov = []  # np.zeros([len(tlabels)], dtype="object")
+    get_dist = []  # np.zeros([len(tlabels)], dtype="object")
+    get_sat_id = []  # np.zeros([len(tlabels)], dtype="object")
+    get_tlabel = []  # np.zeros([len(tlabels)], dtype="object")
+    get_angle_locs = []  # np.zeros([len(tlabels)], dtype="object")
+    get_sat_pos = []  # np.zeros([len(tlabels)], dtype="object")
     get_sat_collection = []
 
     # Iterate over all 3 timestamps in CCOR file:
@@ -341,13 +341,13 @@ def get_satellites_in_fov(
                         )
 
         # Store in lists
-        get_angle_in_fov[tidx] = valid_angles
-        get_dist[tidx] = valid_dists
-        get_sat_id[tidx] = valid_ids
-        get_tlabel[tidx] = valid_tlabel
-        get_angle_locs[tidx] = valid_angle_locs
+        get_angle_in_fov.append(valid_angles)
+        get_dist.append(valid_dists)
+        get_sat_id.append(valid_ids)
+        get_tlabel.append(valid_tlabel)
+        get_angle_locs.append(valid_angle_locs)
         get_sat_collection.append(get_close_points)
-        get_sat_pos[tidx] = valid_sat_pos
+        get_sat_pos.append(valid_sat_pos)
 
     return GetCandidateSatellites(
         get_angle_in_fov=get_angle_in_fov,

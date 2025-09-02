@@ -120,11 +120,15 @@ def run_satellite_id(
             radius_search=search_radius,
         )  # noqa: F841
 
-        sat_dict = {}.fromkeys(["satellite_name", "satellite_angle", "satellite_pos", "satellite_distance"])
+        sat_dict = {}
+        sat_dict["date_obs"] = obs_time.isot
+        sat_dict["date_avg"] = avg_time.isot
+        sat_dict["date_end"] = end_time.isot
+        sat_dict["parent_filename"] = os.path.basename(f)
         sat_dict["satellite_name"] = candidates.get_sat_id
-        sat_dict["satellite_angle"] = candidates.get_angle_in_fov
-        sat_dict["satellite_position"] = candidates.get_angle_locs
-        sat_dict["satellite_distance"] = candidates.get_dist
+        sat_dict["satellite_angle"] = candidates.get_angle_in_fov  # degrees
+        sat_dict["satellite_position"] = candidates.get_angle_locs  # degrees (angular positions from boresight)
+        sat_dict["satellite_distance"] = candidates.get_dist  # km
 
         if write_output_files:
             write_sat_output(header["DATE-OBS"], header["DATE-END"], sat_dict)
