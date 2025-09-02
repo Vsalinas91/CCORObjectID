@@ -6,6 +6,7 @@ This object identification algorithm allows for identifying known celestial obje
  1. Celestrak (or Space-Track for archive) - Earth satellite two-line element (TLE) objects.
  2. Minor Planet Center (MPC) - For comet orbital ephemeris data (may also use for obtaining astroids).
  3. JPL Horizons - planet/spacecraft SPICE Kernels.
+ 4. Hipparcos - star catalogue
 
 These data, along with the CCOR ephemeris contained in the product metadata, are used to identify locations of objects within the image data based entirely off the observing time of the image capture.
 
