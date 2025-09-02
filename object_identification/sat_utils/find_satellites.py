@@ -333,7 +333,7 @@ def get_satellites_in_fov(
                         valid_ids.append(id)
                         valid_dists.append(spos)
                         valid_tlabel.append(tlabels[tidx])
-                        valid_angle_locs.append(angular_locs)
+                        valid_angle_locs.append((angular_locs[0].tolist(), angular_locs[1].tolist()))
                         valid_sat_pos.append(sat_pos)
                         logger.info(
                             f"{id} has a SAT_ANGLE of {sat_angle} from the boresight | Angular Locations (x, y):"
