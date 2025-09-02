@@ -50,7 +50,7 @@ Where:
  * -tle: path to TLE (.tle) data file corresponding to the date for the date found in --input_dir.
 
 
- Note: the CCOR vignetting file needs to be placed in the `static_required` directory as it is not available in this repository.
+ Note: the CCOR vignetting file needs to be placed in the `static_required` directory as it is not available in this repository. In addition, the python enviornment containing the relevant packages to run these algorithms can be installed either via conda using the `environment.yml` file, or via pip using a virtual environment and `requirements.txt`.
 
 
 ## Future Work
