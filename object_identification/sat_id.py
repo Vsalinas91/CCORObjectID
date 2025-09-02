@@ -7,7 +7,7 @@ from astropy.time import Time
 
 
 from .utils.retrieve_data import load_planetary_data
-from .utils.io import read_input
+from .utils.io import read_input, write_sat_output
 from .sat_utils.find_satellites import get_all_positions_for_times, get_satellites_in_fov
 
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
@@ -43,7 +43,11 @@ def remove_duplicate_sat_entries(satellite_list: list[Any]) -> list[Any]:
 
 
 def run_satellite_id(
-    inputs: list[Any], tle: str, search_radius: int | float = 30e3, fov_angle: int | float = 11
+    inputs: list[Any],
+    tle: str,
+    search_radius: int | float = 30e3,
+    fov_angle: int | float = 11,
+    write_output_files: bool = True,
 ) -> None:
     """
     Retrieve candidate satellites, and their approximate pixel locations, within
@@ -115,3 +119,12 @@ def run_satellite_id(
             fov_angle=fov_angle,
             radius_search=search_radius,
         )  # noqa: F841
+
+        sat_dict = {}.fromkeys(["satellite_name", "satellite_angle", "satellite_pos", "satellite_distance"])
+        sat_dict["satellite_name"] = candidates.get_sat_id
+        sat_dict["satellite_angle"] = candidates.get_angle_in_fov
+        sat_dict["satellite_position"] = candidates.get_angle_locs
+        sat_dict["satellite_distance"] = candidates.get_dist
+
+        if write_output_files:
+            write_sat_output(header["DATE-OBS"], header["DATE-END"], sat_dict)
