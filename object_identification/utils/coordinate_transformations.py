@@ -19,7 +19,7 @@ from skyfield.data import mpc
 from skyfield.named_stars import named_star_dict
 import skyfield.api as sf
 
-from .utils_dataclasses import ObjectLocations, ObserverLocation
+from .utils_dataclasses import ObjectLocations, ObserverLocation, CometLocations
 
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 logger = logging.getLogger(__name__)
@@ -65,6 +65,10 @@ def get_ccor_locations_sunpy(ccor_map: GenericMap, observation_time: str, wcs: W
             logger.info(f"BODY: {key.capitalize()} within FOV.")
             planet_dict[key] = (float(body_pixel_x), float(body_pixel_y))
 
+        else:
+            logger.info("No planets found in CCOR FOV.")
+            planet_dict[key] = (None, None)
+
     return planet_dict
 
 
@@ -75,7 +79,7 @@ def get_comet_locations(
     observer: VectorFunction,
     observation_time: int | float,
     wcs: WCS,
-):
+) -> CometLocations:
     """
     Get the comet pixel locations relative to CCOR's WCS and observation time.
     """
@@ -108,9 +112,9 @@ def get_comet_locations(
             logger.info(f"COMET: {body} within FOV.")
             get_comet.append(body)
             get_distance.append(distance)
-            valid_pixels.append((comet_x, comet_y))
+            valid_pixels.append((comet_x.tolist(), comet_y.tolist()))
 
-    return (get_comet, get_distance, valid_pixels)
+    return CometLocations(get_comet=get_comet, get_distance=get_distance, valid_pixels=valid_pixels)
 
 
 def get_star_names(star_ids: list[int | float] | npt.NDArray[Any]) -> list[list[str]]:

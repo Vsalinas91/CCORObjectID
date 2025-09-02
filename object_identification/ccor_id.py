@@ -74,7 +74,6 @@ def run_alg(inputs: list[Any], generate_figures: bool = False, write_output_file
         # Initialize dicts to store the data
         # recombine when writing to output file.
         star_dict = {}
-        planet_dict: dict[str, tuple[Any, Any]] = {}
         data_dict = {}
         comet_dict = {}
 
@@ -134,15 +133,14 @@ def run_alg(inputs: list[Any], generate_figures: bool = False, write_output_file
         # FOR PLANETS/MOON:
         # ----------------
         logger.info("Getting planet(s)/moon within FOV.")
-        planet_locations = get_ccor_locations_sunpy(ccor_map=ccor_map, observation_time=observation_time, wcs=wcs)
+        planet_dict = get_ccor_locations_sunpy(ccor_map=ccor_map, observation_time=observation_time, wcs=wcs)
 
         # FOR COMETS:
         # -----------
         logger.info("Getting comet(s) within FOV.")
-        get_comet, _, valid_pixels = get_comet_locations(
-            comets=comets, sun=sun, ts=ts, observer=observer, observation_time=t, wcs=wcs
-        )
-
+        get_comets = get_comet_locations(comets=comets, sun=sun, ts=ts, observer=observer, observation_time=t, wcs=wcs)
+        get_comet = get_comets.get_comet
+        valid_pixels = get_comet.valid_pixels
         # FILE OUTGEST:
         # -------------
         logger.info("Building data dict for file outgest.")
@@ -197,7 +195,7 @@ def run_alg(inputs: list[Any], generate_figures: bool = False, write_output_file
                 all_star_x=s_x,
                 all_star_y=s_y,
                 constellations=constellations,
-                planet_locs=planet_locations,
+                planet_locs=planet_dict,
                 crpix1=crpix1,
                 crpix2=crpix2,
                 naxis1=image_dims[1],
