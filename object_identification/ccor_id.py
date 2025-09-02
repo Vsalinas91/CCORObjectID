@@ -92,9 +92,7 @@ def run_alg(inputs: list[Any], generate_figures: bool = False, write_output_file
 
         # Define the observer (approximate from GEO location for G19 if observer_geo is not set.):
         try:
-            observer_geo = get_observer_subpoint(
-                observation_time, header["EPHVEC_X"], header["EPHVEC_Y"], header["EPHVEC_Z"]
-            )
+            observer_geo = get_observer_subpoint(observation_time, ccor_map.observer_coordinate)
         except KeyError:
             logger.error(
                 "Invalid key in header for ephemeris positions. Make sure to map correct keys to function call."
@@ -140,7 +138,7 @@ def run_alg(inputs: list[Any], generate_figures: bool = False, write_output_file
         logger.info("Getting comet(s) within FOV.")
         get_comets = get_comet_locations(comets=comets, sun=sun, ts=ts, observer=observer, observation_time=t, wcs=wcs)
         get_comet = get_comets.get_comet
-        valid_pixels = get_comet.valid_pixels
+        valid_pixels = get_comets.valid_pixels
         # FILE OUTGEST:
         # -------------
         logger.info("Building data dict for file outgest.")
