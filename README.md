@@ -41,7 +41,7 @@ Where:
 
 To run the satellite identification algorithm:
 
-> python -m cli --search_radius 30e3 --fov_angle 11.0 -i /path/to/ccor1-l3/data/ -tle /path/to/tle/data.tle
+> python -m cli --search_radius 30e3 --fov_angle 11.0 -w -i /path/to/ccor1-l3/data/ -tle /path/to/tle/data.tle
 
 Where:
  * --search_radius: search radius for identifying candidate satellites near the instrument/observer in units km
