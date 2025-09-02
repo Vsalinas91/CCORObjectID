@@ -40,6 +40,12 @@ if __name__ == "__main__":
             run_ccor_id(files, generate_figures, write_outputs)
         else:
             logger.info(f"Running satellite identification for: {len(files)} image frames.")
-            run_satellite_id(inputs=files, tle=tle, search_radius=search_radius, fov_angle=fov_angle)
+            run_satellite_id(
+                inputs=files,
+                tle=tle,
+                search_radius=search_radius,
+                fov_angle=fov_angle,
+                write_output_files=write_outputs,
+            )
     else:
         logger.error("Invalid path to data...exiting")
