@@ -69,7 +69,11 @@ def run_alg(inputs: list[Any], generate_figures: bool = False, write_output_file
     # Get the vignetting function for masking out the pylon/occulter disc
     # in the object map.
     if generate_figures:
-        vig_data = get_vignetting_func()
+        try:
+            vig_data = get_vignetting_func()
+        except CCORExitError:
+            logger.warning("No vignetting function loaded.")
+            vig_data = None
 
     for f in inputs[:]:
         # Initialize dicts to store the data
@@ -177,8 +181,9 @@ def run_alg(inputs: list[Any], generate_figures: bool = False, write_output_file
             crpix2 = image_frame_coords.crpix2
 
             # If the image is binned, bin the vignetting data too.
-            if data.shape[0] != vig_data.shape[0]:
-                vig_data = reduce_vignette(vig_data, current_image_yaw_state)
+            if vig_data is not None:
+                if data.shape[0] != vig_data.shape[0]:
+                    vig_data = reduce_vignette(vig_data, current_image_yaw_state)
 
             # Generate figure for each time frame:
             plot_figure(

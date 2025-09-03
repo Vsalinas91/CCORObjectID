@@ -114,7 +114,7 @@ def plot_figure(
     data: npt.NDArray[Any],
     date_obs: str,
     date_end: str,
-    vig_data: npt.NDArray[Any],
+    vig_data: npt.NDArray[Any] | None,
     comet_locs: list[tuple[Any, Any]],
     comet_name: list[str],
     star_locs: tuple[npt.NDArray[Any], npt.NDArray[Any]],
@@ -141,12 +141,15 @@ def plot_figure(
     # --------------------------------
     # PLOT THE DATA and OVERLAY COMET
     # --------------------------------
-    ax[0].pcolormesh(
-        np.ma.MaskedArray(data, mask=~(vig_data > 0.01)),
-        cmap=CMAP,
-        norm=colors.PowerNorm(gamma=0.45, vmin=1e-12, vmax=5e-10),
-    )
-    ax[0].contourf(np.ma.MaskedArray(vig_data, mask=(vig_data > 0.01)), colors="black")
+    if vig_data is not None:
+        ax[0].pcolormesh(
+            np.ma.MaskedArray(data, mask=~(vig_data > 0.01)),
+            cmap=CMAP,
+            norm=colors.PowerNorm(gamma=0.45, vmin=1e-12, vmax=5e-10),
+        )
+        ax[0].contourf(np.ma.MaskedArray(vig_data, mask=(vig_data > 0.01)), colors="black")
+    else:
+        ax[0].pcolormesh(data, cmap=CMAP, norm=colors.PowerNorm(gamma=0.45, vmin=1e-12, vmax=5e-10))
 
     # ---------------------------------
     # PLOT OBJECT MAP:
@@ -251,8 +254,9 @@ def plot_figure(
     # FINAL PLOT SET UP AND FORMATTING
     # ---------------------------------
     # Overlay pylon/occulter disc on object map
-    ax[1].contourf(np.ma.MaskedArray(vig_data, mask=vig_data > 0.01), colors="black", hatches=["//"])
-    ax[1].contour(vig_data, levels=[0.009, 0.01], colors="white", linewidths=0.7, alpha=0.7)
+    if vig_data is not None:
+        ax[1].contourf(np.ma.MaskedArray(vig_data, mask=vig_data > 0.01), colors="black", hatches=["//"])
+        ax[1].contour(vig_data, levels=[0.009, 0.01], colors="white", linewidths=0.7, alpha=0.7)
 
     # plt.scatter(s_x//2, s_y//2)
     ax[1].set_xlim(0, 1024)

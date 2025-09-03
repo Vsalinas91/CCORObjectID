@@ -99,8 +99,11 @@ def get_vignetting_func() -> npt.NDArray[Any]:
     """
     Retrieve the vignetting function for plotting.
     """
-    with fits.open(os.path.join(ROOT_DIR, "static_required/vig_ccor1_20250209.fits")) as hdul:
-        return hdul[0].data
+    try:
+        with fits.open(os.path.join(ROOT_DIR, "static_required/vig_ccor1_20250209.fits")) as hdul:
+            return hdul[0].data
+    except Exception:
+        raise CCORExitError("CCOR-1 Vignetting function could not be loaded.")
 
 
 def check_metadata(crpix: int | float) -> bool:
