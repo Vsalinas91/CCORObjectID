@@ -41,9 +41,6 @@ class GetCandidateSatellites:
     get_sat_pos: list[Any]  # satellite vector positions for reference
 
 
-##########################################################################
-# We Want the Positions for All possible Times During the Image Capture: #
-##########################################################################
 def get_all_positions_for_times(
     astro_times: list[Any],
     j_times: list[Any],
@@ -78,15 +75,6 @@ def get_all_positions_for_times(
     Further, all coordinates are relative to the Earth's position, but this can be cast into a barycentric frame
     by simply subtracting the Earth positions--at each time--from the Sun position, and removed from how th
     satellite position vector is defined at the observation time.
-
-    Returns:
-        -) all_sat_names = all satellite names being checked
-        -) all_sat_coords = all satellite coordinates for all times
-        -) all_sun_coords = all sun coordinates for all times
-        -) all_ccor_coords = all ccor coordinates for all times
-        -) all_earth_coords = all earth coordinates for all times
-        -) all_sat_pos = all satellite positions at observation time, can be converted
-
     """
     # Init all lists
     all_sat_names = []  # Satellite names
@@ -94,14 +82,13 @@ def get_all_positions_for_times(
     all_sun_coords = []  # Sun coordinates in GCRS/GEE cartesian
     all_ccor_coords = []  # CCOR coordinates in GCRS/GEE cartesian
     all_earth_coords = []  # Earth coordinates in GCRS/GEE cartesian
-    all_sat_pos = []  # Satellite position vector relative to Earth
+    all_sat_pos = []  # Satellite position vector at observation time relative to Earth
 
     # Iterate over the file times:
     for at, t in zip(astro_times, j_times):
         logger.info(f"Getting satellite data for time: {at.isot}")
 
         # Get Earth and Sun Locations at Observation Time
-        # ---------------------------------------------
         earth_loc = earth.at(t)
         sun_loc = sun.at(t)  # noqa: F841
 
@@ -124,7 +111,6 @@ def get_all_positions_for_times(
             earx, eary, earz = ecoord.cartesian.xyz.to(u.km).to_value()
 
         # Get the CCOR Observer Coordinates:
-        # ------------------------------------------------
         # Convert the CCOR observation location
         if use_gcrs:
             ccor_loc = ccor_map.observer_coordinate.transform_to("gcrs")
@@ -239,23 +225,14 @@ def get_satellites_in_fov(
     Identify all satellites in the CCOR FOV within 11 degrees of the boresight and
     retrieve their cartesian locations, angular positions from the boresight, distances from
     CCOR at their respective times:
-
-    Returns:
-       - get_angle_in_fov = the angle relative to the SUN-CCOR vector, boresight within the FOV
-       - get_dist = distnace from satellite to ccor within the FOV
-       - get_sat_id = name of satellites in FOV
-       - get_tlabel = get the time label for the position
-       - get_angle_locs = get the azimuthal and inclination angles for plotting
-       - get_sat_pos = get the satellite positions in the FOV
-       - get_sat_collation = get satellites locations within the search radius
     """
     # Initialize arrays of type object to store lists of varying sizes
-    get_angle_in_fov = []  # np.zeros([len(tlabels)], dtype="object")
-    get_dist = []  # np.zeros([len(tlabels)], dtype="object")
-    get_sat_id = []  # np.zeros([len(tlabels)], dtype="object")
-    get_tlabel = []  # np.zeros([len(tlabels)], dtype="object")
-    get_angle_locs = []  # np.zeros([len(tlabels)], dtype="object")
-    get_sat_pos = []  # np.zeros([len(tlabels)], dtype="object")
+    get_angle_in_fov = []  # angle from instrument/observatory to satellite relative to Sun-CCOR line-of-sight
+    get_dist = []  # distance from satellite to instrument
+    get_sat_id = []  # name of satellite(s) in FOV
+    get_tlabel = []  # time label for the position(s), e.g., date-beg, date-end
+    get_angle_locs = []  # azimuthal and inclination angles for plotting
+    get_sat_pos = []  # satellite locations within the search radius
     get_sat_collection = []
 
     # Iterate over all 3 timestamps in CCOR file:
