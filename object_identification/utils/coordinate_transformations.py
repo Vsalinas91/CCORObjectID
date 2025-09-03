@@ -64,7 +64,7 @@ def get_ccor_locations_sunpy(ccor_map: GenericMap, observation_time: str, wcs: W
             planet_dict[key] = (float(body_pixel_x), float(body_pixel_y))
 
         else:
-            logger.info("No planets found in CCOR FOV.")
+            logger.info(f"{key.capitalize()} not found in CCOR FOV.")
             planet_dict[key] = (None, None)
 
     return planet_dict
