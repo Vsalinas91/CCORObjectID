@@ -19,3 +19,9 @@ The method to identify satellites requires only the 3D positions of satellite da
  7. Determine candidate satellites *if* it's `sat_angle` is within the instrument's field-of-view (FOV).
 
 If candidate satellites are found, the `sat_angle` may be used to plot a general location relative to the image center. An additional method is included in `find_satellites.py` that enable the approximate of the satellite angular coordinates relative to the image center as both azimuth and inclination angles from the image's bottom. These data are saved to a `.json` file from which the positions may be used to overlay onto the instrument's imagery to validate it's position to the actual image artifact (see examples below).
+
+<img width="1576" height="440" alt="Screenshot 2025-09-03 at 10 24 25" src="https://github.com/user-attachments/assets/4b78f76a-0fd2-4ca7-b312-8fd3ce9384ed" />
+
+The above figure shows the satellites near the observatory, in this case CCOR-1, and those within the FOV (grey cone). Candidate satellites are those who fall just within the 11 degree FOV of the CCOR-1 instrument. The figure below shows the approximate `sat_angle` of a single candidate satellite captured for two image frames spanning a total of 15 minutes. The 2D angles are not shown here.
+
+<img width="1629" height="757" alt="Screenshot 2025-09-03 at 10 24 45" src="https://github.com/user-attachments/assets/4f318e98-b294-4b22-95f6-b1e25d10f199" />
