@@ -97,7 +97,7 @@ def get_angular_positions(sat, ccor, sun):
     return (factor * azim, s_inclination)
 
 
-def get_ortho_angle(sat, ccor, sun, yaw_status, ccor_fov=5.5 * 2):
+def get_pixel_locations(sat, ccor, sun, yaw_status, ccor_fov=11.0):
     """
     Get approximate pixel locations of projected satellite vectors on CCOR Plane
     """
