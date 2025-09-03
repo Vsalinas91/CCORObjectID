@@ -2,11 +2,14 @@ import os
 import logging
 from pathlib import Path
 from typing import Any
-import numpy as np
 import numpy.typing as npt
 
+import numpy as np
 from skyfield.api import load
+
 from .visualization.make_figure import plot_figure, set_image_yaw_state, scale_coordinates, reduce_vignette
+from .utils.exceptions import CCORExitError
+from .utils.io import read_input, write_output, get_vignetting_func
 from .utils.retrieve_data import (
     load_planetary_data,
     load_star_data,
@@ -15,7 +18,6 @@ from .utils.retrieve_data import (
     get_star_magnitude_mask,
     load_constellation_data,
 )
-from .utils.io import read_input, write_output, get_vignetting_func
 from .utils.coordinate_transformations import (
     get_ccor_locations,
     get_ccor_locations_sunpy,
@@ -24,7 +26,6 @@ from .utils.coordinate_transformations import (
     get_ccor_observer,
     get_observer_subpoint,
 )
-from .utils.exceptions import CCORExitError
 
 
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))

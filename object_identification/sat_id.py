@@ -5,7 +5,6 @@ from typing import Any
 from skyfield.api import load
 from astropy.time import Time
 
-
 from .utils.retrieve_data import load_planetary_data
 from .utils.io import read_input, write_sat_output
 from .sat_utils.find_satellites import get_all_positions_for_times, get_satellites_in_fov

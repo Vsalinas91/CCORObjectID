@@ -3,7 +3,6 @@ import logging
 from pathlib import Path
 from typing import Any
 import numpy.typing as npt
-from matplotlib.typing import ColorType
 
 
 import numpy as np
@@ -12,6 +11,7 @@ from skimage.measure import block_reduce
 import matplotlib.pyplot as plt
 from matplotlib import colors
 from matplotlib.axes import Axes
+from matplotlib.typing import ColorType
 
 from .color_map import ccor_blue
 from .plotting_dataclasses import ImageCenterData, CelestialBodyPlot, ConstellationData

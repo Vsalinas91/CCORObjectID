@@ -1,12 +1,13 @@
 from dataclasses import dataclass
 from typing import Any
 import numpy.typing as npt
-from skyfield.vectorlib import VectorFunction
 
 from astropy.io import fits
 from astropy.wcs import WCS
 from sunpy import map as smap
+
 from skyfield.timelib import Timescale
+from skyfield.vectorlib import VectorFunction
 
 
 # DATA INGEST:

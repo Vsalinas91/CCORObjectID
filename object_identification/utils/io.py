@@ -3,15 +3,14 @@ import os
 import datetime
 import warnings
 import logging
+from pathlib import Path
+import numpy.typing as npt
+from typing import Any
 
 from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.time import Time
 from sunpy import map as smap
-from pathlib import Path
-
-from typing import Any
-import numpy.typing as npt
 from skyfield.timelib import Timescale
 
 from .utils_dataclasses import GetData
