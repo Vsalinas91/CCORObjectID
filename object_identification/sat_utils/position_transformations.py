@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def get_angle(sat, ccor, sun):
+def get_sat_angle(sat, ccor, sun):
     """
     Get the angle between two vectors (2d or 3d), this angle represents the angle
     for two given vectors in 3D
@@ -37,6 +37,83 @@ def get_angle(sat, ccor, sun):
 
     # print(f"Angle at vertex B: {theta_rad:.4f} radians, or {theta_deg:.2f} degrees")
     return theta_deg
+
+
+def get_sat_az(x_proj, y_proj):
+    """
+    Calculate the azimuth angle of the projected satellite image on the observer plane.
+    The coordinates x_proj and y_proj are the satellite's projection location centered on the sun.
+
+                                .  |  .   Y (SOLAR NORTH)
+                             .     |    .
+                           o       |      .
+                            \      |       .                                   # noqa: W605
+                               \   |        .                                  # noqa: W605
+                          --------- ------------ X (WEST LIMB)
+                                   |
+                                   |
+                                   |
+                                   |
+
+    Args:
+       x_proj = projected x coordinate of satellite
+       y_proj = projected y coordinate of satellite
+
+    Returns:
+       Azimuthal angle of the satellite position on the observer 2D plane
+       from solar west.
+
+    """
+    # Calculate the azimuthal angle
+    azimuth_rad = np.arctan2(y_proj, x_proj)
+    return np.degrees(azimuth_rad)
+
+
+def do_sat_projection(obs_coords, sat_coords, sun_coords):
+    """
+    Calculates the projected satellite position on a 2D observer plane
+    orthogonal to the observer-sun vector. For solar imagers, the
+    coordinates provided should be in a heliocentric cartesian coordinate
+    system such as Helioprojective.
+
+    This method assumes that z = Solar North allowing for the projected locations to
+    be correctly aligned with the image (after rotation with crota).
+
+    Args:
+        obs_coords (np.array): 3D position vector of the observer.
+        sun_coords (np.array): 3D position vector of the Sun.
+        sat_coords (np.array): 3D position vector of the satellite.
+
+    Returns:
+        x_proj-sun_x_proj = sun centered satellite projection x coordinate
+        y_proj-sun_y_proj = sun centered satellite projection y coordinate
+    """
+    # Step 1: Define vectors and local coordinate system
+    # Vector from observer to sun
+    G = sun_coords - obs_coords
+    Gn = G / np.linalg.norm(G)
+
+    # Celestial North vector in ICRS frame
+    z = np.array([0, 0, 1])
+
+    # Local Y-axis (North direction in image plane)
+    y_frame = z - np.dot(z, Gn) * Gn
+    Un = y_frame / np.linalg.norm(y_frame)
+
+    # Local X-axis (East direction in image plane)
+    Rn = np.cross(Un, Gn)
+
+    # Step 2: Project satellite vector onto the plane
+    # Vector from observer to satellite
+    S = sat_coords - obs_coords
+
+    x_proj = np.dot(S, Rn)
+    y_proj = np.dot(S, Un)
+
+    sun_x_proj = np.dot(G, Rn)
+    sun_y_proj = np.dot(G, Un)
+
+    return x_proj - sun_x_proj, y_proj - sun_y_proj
 
 
 def rotate_point(point, center, angle_degrees):
