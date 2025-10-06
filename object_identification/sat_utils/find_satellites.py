@@ -15,11 +15,6 @@ from astropy.time import Time as astroTime
 from astropy.coordinates import get_body, get_body_barycentric
 from astropy.io.fits import Header
 
-
-from . import position_transformations
-
-get_angle = position_transformations.get_angle
-
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 logger = logging.getLogger(__name__)
 

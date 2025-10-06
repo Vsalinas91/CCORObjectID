@@ -1,7 +1,22 @@
 import numpy as np
+from dataclasses import dataclass
+import numpy.typing as npt
+from typing import Any
 
 
-def get_sat_angle(sat, ccor, sun):
+@dataclass(frozen=True, kw_only=True)
+class GetSatelliteProjection:
+    xproj: float
+    yproj: float
+
+
+@dataclass(frozen=True, kw_only=True)
+class GetSatelliteHelioprojective:
+    Tx: float
+    Ty: float
+
+
+def get_sat_angle(sat: npt.NDArray[Any], ccor: npt.NDArray[Any], sun: npt.NDArray[Any]) -> float:
     """
     Get the angle between two vectors (2d or 3d), this angle represents the angle
     for two given vectors in 3D
@@ -39,7 +54,7 @@ def get_sat_angle(sat, ccor, sun):
     return theta_deg
 
 
-def get_sat_az(x_proj, y_proj):
+def get_sat_az(x_proj: float, y_proj: float) -> float:
     """
     Calculate the azimuth angle of the projected satellite image on the observer plane.
     The coordinates x_proj and y_proj are the satellite's projection location centered on the sun.
@@ -69,7 +84,7 @@ def get_sat_az(x_proj, y_proj):
     return np.degrees(azimuth_rad)
 
 
-def do_sat_projection(obs_coords, sat_coords, sun_coords):
+def do_sat_projection(obs_coords: npt.NDArray[Any], sat_coords: npt.NDArray[Any], sun_coords: npt.NDArray[Any]):
     """
     Calculates the projected satellite position on a 2D observer plane
     orthogonal to the observer-sun vector. For solar imagers, the
@@ -88,7 +103,7 @@ def do_sat_projection(obs_coords, sat_coords, sun_coords):
         x_proj-sun_x_proj = sun centered satellite projection x coordinate
         y_proj-sun_y_proj = sun centered satellite projection y coordinate
     """
-    # Step 1: Define vectors and local coordinate system
+    # Define vectors and local coordinate system
     # Vector from observer to sun
     G = sun_coords - obs_coords
     Gn = G / np.linalg.norm(G)
@@ -103,7 +118,7 @@ def do_sat_projection(obs_coords, sat_coords, sun_coords):
     # Local X-axis (East direction in image plane)
     Rn = np.cross(Un, Gn)
 
-    # Step 2: Project satellite vector onto the plane
+    # Project satellite vector onto the plane
     # Vector from observer to satellite
     S = sat_coords - obs_coords
 
@@ -113,7 +128,27 @@ def do_sat_projection(obs_coords, sat_coords, sun_coords):
     sun_x_proj = np.dot(G, Rn)
     sun_y_proj = np.dot(G, Un)
 
-    return x_proj - sun_x_proj, y_proj - sun_y_proj
+    return GetSatelliteProjection(
+        xproj=x_proj - sun_x_proj,
+        yproj=y_proj - sun_y_proj,
+    )
+
+
+def angle_to_helioprojective(sat_angle: float, sat_az: float) -> GetSatelliteHelioprojective:
+    """
+    Using the sat_angle and sat_az angles, calculate the approxite helioprojective
+    position in units of degrees from the observer's boresight.
+
+    Note: sat_angle in degrees
+          sat_az in radians.
+    """
+    Tx = (sat_angle) * np.sin(sat_az)
+    Ty = (sat_angle) * np.cos(sat_az)
+
+    return GetSatelliteHelioprojective(
+        Tx=Tx,
+        Ty=Ty,
+    )
 
 
 def rotate_point(point, center, angle_degrees):
