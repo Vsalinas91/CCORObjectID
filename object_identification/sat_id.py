@@ -66,12 +66,6 @@ def run_satellite_id(
     """
     # Load the timescale
     ts = load.timescale()
-    tlabels = ["date-beg", "date-avg", "date-end"]
-
-    # Define the earth/sun ephemeris data:
-    reference_bodies = load_planetary_data()
-    earth = reference_bodies.earth
-    sun = reference_bodies.sun
 
     # Get the satellite ephemeris data from TLE
     try:
