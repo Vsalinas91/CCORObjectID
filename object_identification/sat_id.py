@@ -12,6 +12,7 @@ import astropy.units as u
 from .utils.io import read_input, write_sat_output
 from .sat_utils.find_satellites import get_observer, propagate_satellite, propagate_sun
 from .sat_utils.position_transformations import get_sat_angle, get_sat_az, do_sat_projection, angle_to_helioprojective
+from .sat_utils.store_satellite_data import AllCandidateSatelliteData, SingleCandidateSatelliteData
 
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 logger = logging.getLogger(__name__)
@@ -52,7 +53,6 @@ def remove_duplicate_sat_entries(satellite_list: list[Any]) -> list[Any]:
 def run_satellite_id(
     inputs: list[Any],
     tle: str,
-    search_radius: int | float = 30e3,
     fov_angle: int | float = 11,
     time_offset: int | float = 3,
     write_output_files: bool = True,
@@ -123,10 +123,10 @@ def run_satellite_id(
         ]
         astro_times = [Time(time, scale="utc") for time in check_times]
         julian_times = [ts.from_astropy(astro_time) for astro_time in astro_times]
-        time_labels = [f"time{str(i).zfill(2)}" for i in range(len(check_times))]
 
         # Iterate over all times and project the satellite positions to those times relative
         # to our observer's observation time:
+        all_valid_data = AllCandidateSatelliteData()
         for tidx, ccor_time in enumerate(julian_times):
             logger.info(f"Time: {check_times[tidx]}")
 
@@ -155,6 +155,8 @@ def run_satellite_id(
             distance_error = np.abs(observer_sun_distance_meta - observer_sun_distance_calculated)
             logger.info(f"Observer-Sun distance error: {distance_error} km or {(distance_error * u.km).to(u.au)}")
 
+            # Init lists for each satellite:
+            single_valid_data = SingleCandidateSatelliteData()
             for satellite in valid_satellites:
                 if satellite.name == observer_satellite:
                     continue
@@ -217,5 +219,37 @@ def run_satellite_id(
                         + f"Calculated pixel position is {xpix}, {ypix}."
                     )
 
+                    # Write important bits
+                    single_valid_data.sat_angle_write.append(sat_angle)
+                    single_valid_data.pos_angle_write.append(sat_az)
+                    single_valid_data.sat_coord_x.append(xpix)
+                    single_valid_data.sat_coord_y.append(ypix)
+                    single_valid_data.sat_name.append(satellite.name)
+                    single_valid_data.sat_sep.append(sat_dist)
+                    single_valid_data.tx_sat.append(factor * Tx)
+                    single_valid_data.ty_sat.append(factor * Ty)
+                    single_valid_data.time_to_sat.append(check_times[tidx])
+
+                    # Capture all coordinates
+                    all_valid_data.sat_pix_x.append(xpix)
+                    all_valid_data.sat_pix_y.append(ypix)
+                    all_valid_data.get_proj_x.append(xproj)
+                    all_valid_data.get_proj_y.append(yproj)
+
+                all_valid_data.get_sat_x.append(sat_vector_gcrs[0])
+                all_valid_data.get_sat_y.append(sat_vector_gcrs[1])
+
+            all_valid_data.valid_angles.append(single_valid_data.sat_angle_write)
+            all_valid_data.pos_angles.append(single_valid_data.pos_angle_write)
+            all_valid_data.get_sat_astro_x.append(single_valid_data.sat_coord_x)
+            all_valid_data.get_sat_astro_y.append(single_valid_data.sat_coord_y)
+            all_valid_data.get_sat_name.append(single_valid_data.sat_name)
+            all_valid_data.get_sat_sep.append(single_valid_data.sat_sep)
+            all_valid_data.sat_tx.append(single_valid_data.tx_sat)
+            all_valid_data.sat_ty.append(single_valid_data.ty_sat)
+            all_valid_data.valid_time.append(single_valid_data.time_to_sat)
+
+        all_valid_data.build_sat_dict(j_times=julian_times, check_times=check_times)
+
         if write_output_files:
-            write_sat_output(header["DATE-OBS"], header["DATE-END"], sat_dict)
+            write_sat_output(header["DATE-OBS"], header["DATE-END"], all_valid_data.sat_dict)
