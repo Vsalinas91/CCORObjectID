@@ -10,7 +10,7 @@ from astropy.time import Time
 import astropy.units as u
 
 from .utils.io import read_input, write_sat_output
-from .sat_utils.find_satellites import get_observer, propagate_satellite, propagate_sun
+from .sat_utils.find_satellites import get_observer, propagate_satellite, propagate_sun, get_sat_angle_errors
 from .sat_utils.position_transformations import get_sat_angle, get_sat_az, do_sat_projection, angle_to_helioprojective
 from .sat_utils.store_satellite_data import AllCandidateSatelliteData, SingleCandidateSatelliteData
 
@@ -213,11 +213,26 @@ def run_satellite_id(
                     xpix = sat_pix[0][0]
                     ypix = sat_pix[0][1]
 
+                    # Now calculate errors:
+                    sat_angular_errors = get_sat_angle_errors(
+                        sat_angle=sat_angle, sat_az=sat_az, factor=factor, wcs=wcs, adjust_by=1, increment=0.5
+                    )
+                    xpix_error = sat_angular_errors.xpix_error
+                    ypix_error = sat_angular_errors.ypix_error
+
                     logger.info(
                         f"Satellite {satellite.name} is {sat_angle} from boresight "
                         + f"with an azimuthal position of {sat_az} relative to the observing plane. "
                         + f"Calculated pixel position is {xpix}, {ypix}."
                     )
+
+                    # Write errors
+                    single_valid_data.sx_min_error.append(xpix_error[0])
+                    single_valid_data.sx_max_error.append(xpix_error[-1])
+                    single_valid_data.sy_min_error.append(ypix_error[0])
+                    single_valid_data.sy_max_error.append(ypix_error[-1])
+                    single_valid_data.sx_mean.append(np.median(xpix_error))
+                    single_valid_data.sy_mean.append(np.median(ypix_error))
 
                     # Write important bits
                     single_valid_data.sat_angle_write.append(sat_angle)
@@ -248,6 +263,13 @@ def run_satellite_id(
             all_valid_data.sat_tx.append(single_valid_data.tx_sat)
             all_valid_data.sat_ty.append(single_valid_data.ty_sat)
             all_valid_data.valid_time.append(single_valid_data.time_to_sat)
+            # Errors
+            all_valid_data.sat_x_error_min.append(single_valid_data.sx_min_error)
+            all_valid_data.sat_x_error_max.append(single_valid_data.sx_max_error)
+            all_valid_data.sat_y_error_min.append(single_valid_data.sy_min_error)
+            all_valid_data.sat_y_error_max.append(single_valid_data.sy_max_error)
+            all_valid_data.sat_x_mean.append(single_valid_data.sx_mean)
+            all_valid_data.sat_y_mean.append(single_valid_data.sy_mean)
 
         all_valid_data.build_sat_dict(j_times=julian_times, check_times=check_times)
 
