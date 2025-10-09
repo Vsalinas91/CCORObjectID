@@ -140,7 +140,7 @@ def get_observer(
     else:
         # Use of the TLE is more reliable as we are certain to capture passing/neighboring satellites at the same times.
         # For the position from the TLE, want to use the lagged time--this will require more rigorous testing
-        obs_geo = satellite.at(ts.from_astropy(Time(obstime)))
+        obs_geo = satellite.at(ts.from_astropy(obstime))
         obs_vector_gcrs = obs_geo.position.km
         # Now get the ITRS position
         obs_vector_itrs = obs_geo.frame_xyz(itrs).km
