@@ -208,7 +208,7 @@ def run_satellite_id(
                         Ty = (Ty * u.deg).to(u.arcsec).value
 
                     # Now, calculate the pixel location using the input file's WCS:
-                    hpc_coord = np.array([factor * Tx, factor * Ty]) * astro_unit
+                    hpc_coord = np.array([[factor * Tx, factor * Ty]]) * astro_unit
                     sat_pix = wcs.all_world2pix(hpc_coord, 0)  # origin is = 0 if image origin is bottom left corner
                     xpix = sat_pix[0][0]
                     ypix = sat_pix[0][1]
