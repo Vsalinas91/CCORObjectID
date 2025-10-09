@@ -14,6 +14,7 @@ import astropy.units as u
 from astropy.time import Time as astroTime
 from astropy.coordinates import get_body, get_body_barycentric
 from astropy.io.fits import Header
+from astropy.wcs import WCS
 
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 logger = logging.getLogger(__name__)
@@ -35,6 +36,12 @@ class GetObserverPosition:
 class GetSunPosition:
     sun_vector_gcrs: npt.NDArray[Any]
     sun_vector_hpc: npt.NDArray[Any]
+
+
+@dataclass(frozen=True, kw_only=True)
+class SatErrors:
+    xpix_error: list[Any]
+    ypix_error: list[Any]
 
 
 def propagate_satellite(
@@ -154,6 +161,45 @@ def get_observer(
     return GetObserverPosition(
         obs_vector_gcrs=obs_vector_gcrs,
         obs_vector_hpc=obs_coord_helio,
+    )
+
+
+def get_sat_angle_errors(
+    sat_angle: float,
+    sat_az: float,
+    factor: int | float,
+    wcs: WCS,
+    adjust_by: int | float = 1,
+    increment: int | float = 0.5,
+) -> SatErrors:
+    """
+    Calculate the error bars associated with an angular offset of adjust_by relative to the
+    projected satellite position. 1 degree offset means different things in relation to the
+    distance of the satellite to the observer.
+
+    A closer satellite < 300 km from the observer will have a streak that spans a larger spatial footprint
+    thank one that is much further away ~1000 km. As a result, a 1 degree error means a small offset for closer
+    objects than further objects allowing for one to further deduce which satellite corresponds to an
+    optical streak-like artifcat (reflection or actual position depending on orientation of observer to
+    Earth's ecliptic (GEO only)
+    """
+    xpix_error = []
+    ypix_error = []
+    adjustments = np.arange(-adjust_by, adjust_by + 0.1, increment)
+    for adjust in adjustments:
+        # Calculate the HPC error
+        sat_angle_error = sat_angle + adjust
+        Tx_error = (sat_angle_error * np.sin(np.deg2rad(sat_az))) * u.deg
+        Ty_error = (sat_angle_error * np.cos(np.deg2rad(sat_az))) * u.deg
+        # Esimate the pixel offsets:
+        hpc_error_coords = np.array([[factor * Tx_error.value, factor * Ty_error.value]]) * u.deg
+        sat_pix_error = wcs.all_world2pix(hpc_error_coords, 0)
+        xpix_error.append(sat_pix_error[0][0])
+        ypix_error.append(sat_pix_error[0][1])
+
+    return SatErrors(
+        xpix_error=xpix_error,
+        ypix_error=ypix_error,
     )
 
 
