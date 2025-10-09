@@ -136,7 +136,7 @@ def run_satellite_id(
             sun_vector_hpc = sun_position.sun_vector_hpc
 
             # Get the observer's position
-            observer_sat = [sat for sat in valid_satellites if sat.name == observer_satellite]  # for CCOR
+            observer_sat = [sat for sat in valid_satellites if sat.name == observer_satellite][0]  # for CCOR
             observer_position = get_observer(
                 header=header,
                 obstime=obstime,
