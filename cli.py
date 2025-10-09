@@ -43,9 +43,10 @@ if __name__ == "__main__":
             run_satellite_id(
                 inputs=files,
                 tle=tle,
-                search_radius=search_radius,
                 fov_angle=fov_angle,
+                time_offset=3,
                 write_output_files=write_outputs,
+                observer_satellite="GOES 19",
             )
     else:
         logger.error("Invalid path to data...exiting")

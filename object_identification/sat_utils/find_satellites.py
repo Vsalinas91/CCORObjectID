@@ -2,338 +2,204 @@ import os
 import logging
 from dataclasses import dataclass
 from typing import Any
-import numpy.typing as npt
-from skyfield.vectorlib import VectorFunction
-from sunpy.map.mapbase import GenericMap
-
 import numpy as np
-from astropy.coordinates import SkyCoord, CartesianRepresentation
+import numpy.typing as npt
+
+from skyfield.framelib import itrs
+from skyfield.timelib import Time, Timescale
+from skyfield.api import EarthSatellite
+
+from astropy.coordinates import SkyCoord, CartesianRepresentation, ICRS
 import astropy.units as u
-
-from . import position_transformations
-
-get_angle = position_transformations.get_angle
-get_angular_positions = position_transformations.get_angular_positions
+from astropy.time import Time as astroTime
+from astropy.coordinates import get_body, get_body_barycentric
+from astropy.io.fits import Header
+from astropy.wcs import WCS
 
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, kw_only=True)
-class GetAllSatellites:
-    all_sat_names: npt.NDArray[Any]  # catalogue sattelite names in TLE
-    all_sat_coords: npt.NDArray[Any]  # coordinates/positions of satellites
-    all_sun_coords: npt.NDArray[Any]  # sun coordinates at obstime
-    all_ccor_coords: npt.NDArray[Any]  # ccor coordinates at obstime
-    all_earth_coords: npt.NDArray[Any]  # earth coordinates at obstime
-    all_sat_pos: npt.NDArray[Any]  # satellite positions (VectorFunction) objects
-    goes_sat_coords: npt.NDArray[Any]  # GOES-19 satellite coords
+class GetSatellitePosition:
+    sat_vector_gcrs: npt.NDArray[Any]
+    sat_vector_hpc: npt.NDArray[Any]
 
 
 @dataclass(frozen=True, kw_only=True)
-class GetCandidateSatellites:
-    get_angle_in_fov: list[Any]  # satellite-sun angle (similar to sun-earth, and/or sun-moon)
-    get_dist: list[Any]  # distance from satellite to observer
-    get_sat_id: list[Any]  # satellite ids within FOV
-    get_tlabel: list[Any]  # time labels for mapping values/locations to corresponding time stamp
-    get_angle_locs: list[Any]  # approximation to 2D locations of satellite in FOV/image
-    get_sat_collection: list[Any]  # satellite vector function objects for valid satellites
-    get_sat_pos: list[Any]  # satellite vector positions for reference
+class GetObserverPosition:
+    obs_vector_gcrs: npt.NDArray[Any]
+    obs_vector_hpc: npt.NDArray[Any]
 
 
-def get_all_positions_for_times(
-    astro_times: list[Any],
-    j_times: list[Any],
-    earth: VectorFunction,
-    sun: VectorFunction,
-    ccor_map: GenericMap,
-    valid_sat: list[Any],
-    use_gcrs: bool = False,
-) -> GetAllSatellites:
+@dataclass(frozen=True, kw_only=True)
+class GetSunPosition:
+    sun_vector_gcrs: npt.NDArray[Any]
+    sun_vector_hpc: npt.NDArray[Any]
+
+
+@dataclass(frozen=True, kw_only=True)
+class SatErrors:
+    xpix_error: list[Any]
+    ypix_error: list[Any]
+
+
+def propagate_satellite(
+    satellite: EarthSatellite, time: float | Time, obstime: astroTime, coordinate_frame: SkyCoord
+) -> GetSatellitePosition:
     """
-    Get the Sun, CCOR, Earth, and satellite positions for
-    all times reported in a CCOR data product file's header.
+    Using the observation time, propagate satellite positions to the time range
+    specified for identifying candidate satellites in the FOV.
 
-    This ensures that we capture all possible satellites positions projected
-    to DATE-BEG=DATE-OBS, DATE-AVG, DATE-END.
-
-    The inputs are:
-
-        -) astro_times = astropy Time objects for date-obs, date-avg, date-end
-        -) j_times = jdate times for date-obs, date-avg, date-end for predicting positions
-        -) earth = earth ephemeris object
-        -) sun = sun ephemeris object
-        -) ccor_map = ccor_map object
-        -) valid_sat = all valid satellites (no duplicates)
-
-    There are several options for the coordinate transformations using toggle use_gcrs:
-
-        -) Use GCRS will cast all coordinates into the Geocentric Celestial Reference System
-        -) Not using GCRS will default the coordinates to being cast into a Geocentric Earth Equatorial System
-           which is more ideal when dealing with satellite positions relative to other celestial bodies.
-
-    Further, all coordinates are relative to the Earth's position, but this can be cast into a barycentric frame
-    by simply subtracting the Earth positions--at each time--from the Sun position, and removed from how th
-    satellite position vector is defined at the observation time.
+    For CCOR, suggest using 5 times for generating satellite "streaks" as
+    often times identifying satellites for only the observation time will
+    not work. This is due to how much satellites move within a 15 minute period
+    depending on their proximity to the observer. Streaks help capture the general motion,
+    and may ensure that candidate satellite positions in an image may be near or
+    within the derived streak.
     """
-    # Init all lists
-    all_sat_names = []  # Satellite names
-    all_sat_coords = []  # satellite coordinates in GCRS/GEE cartesian
-    all_sun_coords = []  # Sun coordinates in GCRS/GEE cartesian
-    all_ccor_coords = []  # CCOR coordinates in GCRS/GEE cartesian
-    all_earth_coords = []  # Earth coordinates in GCRS/GEE cartesian
-    all_sat_pos = []  # Satellite position vector at observation time relative to Earth
+    # Get geocentric International Celestial Reference System ICRS satellite position
+    #   note: ICRS origin the solar system barycenter, but for Earth Satellites, this is
+    #         relative to Earth.
+    sat_geo = satellite.at(time)
+    # For calculating the sat_angle
+    sat_vector_gcrs = sat_geo.position.km
 
-    # Iterate over the file times:
-    for at, t in zip(astro_times, j_times):
-        logger.info(f"Getting satellite data for time: {at.isot}")
+    # Now transform to a International Terrestrial Reference System ITRS frame for
+    # eventually transforming our position to a heliocentric frame. ITRS is terrestrial,
+    # and so it is geocentric
+    #   note: This is used to do the 3D->2D projection onto the observer plane relative to Solar North.
+    sat_vector_itrs = sat_geo.frame_xyz(itrs).m
+    # Define a skycoord object for the ITRS coordinate. Here we use the obervation time
+    # so that our heliocentric frame matches that provided in the metadata.
+    sat_vector_itrs_skycoord = SkyCoord(CartesianRepresentation(sat_vector_itrs * u.m), frame="itrs", obstime=obstime)
+    # Now cast the position into a heliocentric frame:
+    sat_coord_helio = sat_vector_itrs_skycoord.transform_to(coordinate_frame).cartesian.xyz.to(u.km).value
 
-        # Get Earth and Sun Locations at Observation Time
-        earth_loc = earth.at(t)
-        sun_loc = sun.at(t)  # noqa: F841
-
-        # Observe the sun from the Earth to get it's position relative to Earth at the observatory time.
-        # and get it's position vector
-        s = earth_loc.observe(sun).apparent()
-        if use_gcrs:
-            # use GCRS
-            sunx, suny, sunz = s.position.km
-            earx, eary, earz = earth_loc.position.km
-        else:
-            # use GEE
-            srep = CartesianRepresentation(s.position.km * u.km)
-            scoord = SkyCoord(srep, frame="geocentricearthequatorial", representation_type="cartesian", obstime=at)
-
-            erep = CartesianRepresentation(earth_loc.position.km * u.km)
-            ecoord = SkyCoord(erep, frame="geocentricearthequatorial", representation_type="cartesian", obstime=at)
-
-            sunx, suny, sunz = scoord.cartesian.xyz.to(u.km).to_value()
-            earx, eary, earz = ecoord.cartesian.xyz.to(u.km).to_value()
-
-        # Get the CCOR Observer Coordinates:
-        # Convert the CCOR observation location
-        if use_gcrs:
-            ccor_loc = ccor_map.observer_coordinate.transform_to("gcrs")
-        else:
-            ccor_loc = ccor_map.observer_coordinate.transform_to("geocentricearthequatorial")
-        # Make into a SkyCoord object
-        ccor_loc = SkyCoord(
-            CartesianRepresentation(
-                ccor_loc.cartesian.x.to(u.km), ccor_loc.cartesian.y.to(u.km), ccor_loc.cartesian.z.to(u.km)
-            ),
-            frame="geocentricearthequatorial",
-            representation_type="cartesian",
-            obstime=at,
-        )
-
-        # As with the earth satellite objects, we must also add the earth position to the CCOR position
-        # vector to account for a barycentric reference frame
-        # [DISABLE ADDING EARTH if not earth relative] for ccor AND sun vectors
-        ccor_x = ccor_loc.cartesian.x.to(u.km).to_value() + earx
-        ccor_y = ccor_loc.cartesian.y.to(u.km).to_value() + eary
-        ccor_z = ccor_loc.cartesian.z.to(u.km).to_value() + earz
-
-        # Commented out, but remove earth position if casting into barycentric frame
-        # sunx -= earx
-        # suny -= eary
-        # sunz -= earz
-
-        # Get satellite positions and ids
-        # --------------------------------------------------
-        sat_xyzs = []  # Satellite xyzs, same as coords
-        sat_name = []  # The satellite name, not NORAD Cat ID
-        sat_coords = []  # Satellite coordinates (actually the same thing)
-        sat_id = []  # satellite catalogue number
-        sat_pos = []  # satellite position at observation time
-        for i, sat in enumerate(valid_sat):
-            # Define the position relative to Earth in a barycentric reference frame
-            # ensures that all bodies are in the same reference frame
-            position = (earth + sat).at(t).position.km  # skip earth reference for now
-            # position = sat.at(t).position.km # remove earth if desired
-
-            # Get the satellites cartesian coordinates for transforming into a SkyCoord object
-            rep = CartesianRepresentation(position * u.km)
-            if use_gcrs:
-                # If using GCRS, insert frame here
-                sat_coord = SkyCoord(rep, frame="gcrs", obstime=at)
-            else:
-                # Else we use GEE
-                # p = (earth+sat).at(t).position.km
-                # v = (earth+sat).at(t).velocity.km_per_s
-                # teme_v = CartesianDifferential(v*u.km/u.s)
-                # teme_p = CartesianRepresentation(p*u.km)
-                # teme = TEME(teme_p.with_differentials(teme_v), obstime=at)
-
-                # rep = teme.transform_to(frames.GeocentricEarthEquatorial(obstime=at)).cartesian
-                sat_coord = SkyCoord(
-                    rep, frame="geocentricearthequatorial", obstime=at, representation_type="cartesian"
-                )
-
-            # Append all relevant satellite data
-            sat_coords.append(sat_coord)
-            sat_xyzs.append(sat_coord)
-            sat_name.append(sat.name)
-            sat_id.append(sat.model.satnum)
-            sat_pos.append((earth + sat).at(t))
-
-        # Define the CCOR To Sun Line-of-Sight (LOS):
-        # ---------------------------------------------------
-        # Define CCOR-to-Sun Line of Sight (LOS)
-        # Note: because it's CCOR relative, need to adjust angles by 180 if
-        # plotting the 3D satellite locations relative to CCOR's FOV
-        pos = np.sqrt((ccor_x - sunx) ** 2.0 + (ccor_y - suny) ** 2.0 + (ccor_z - sunz) ** 2.0)
-        az = np.arctan2((ccor_y - suny), (ccor_x - sunx))  # 180 - az in degrees if plotting grid
-        el = np.arccos((ccor_z - sunz) / pos)  # also needs to be adjusted if plotting  # noqa: F841
-        sc_angle = np.rad2deg(np.arccos((sunz - ccor_z) / pos))  # angle to sun's position
-        logger.info(
-            f"Sun is at an inclination angle of {sc_angle} from "
-            + f"x-axis at time {t.utc_datetime()} and {az} from horizontal."
-        )
-
-        all_sat_names.append(sat_name)
-        all_sat_coords.append(sat_coords)
-        all_sun_coords.append((sunx, suny, sunz))
-        all_ccor_coords.append((ccor_x, ccor_y, ccor_z))
-        all_earth_coords.append((earx, eary, earz))
-        all_sat_pos.append(sat_pos)
-
-    # Find goes position:
-    goes_sat_coord = np.array(all_sat_coords)[np.where(np.array(all_sat_names) == "GOES 19")]
-
-    return GetAllSatellites(
-        all_sat_names=np.array(all_sat_names),
-        all_sat_coords=np.array(all_sat_coords),
-        all_sun_coords=np.array(all_sun_coords),
-        all_ccor_coords=np.array(all_ccor_coords),
-        all_earth_coords=np.array(all_earth_coords),
-        all_sat_pos=np.array(all_sat_pos),
-        goes_sat_coords=np.array(goes_sat_coord),
+    return GetSatellitePosition(
+        sat_vector_gcrs=sat_vector_gcrs,
+        sat_vector_hpc=sat_coord_helio,
     )
 
 
-def get_satellites_in_fov(
-    tlabels: list[Any],
-    all_ccor_coords: npt.NDArray[Any],
-    all_sun_coords: npt.NDArray[Any],
-    all_sat_coords: npt.NDArray[Any],
-    all_sat_names: npt.NDArray[Any],
-    all_sat_pos: npt.NDArray[Any],
-    fov_angle: int | float = 11,
-    radius_search: int | float = 30e3,
-) -> GetCandidateSatellites:
+def propagate_sun(obstime: astroTime) -> GetSunPosition:
     """
-    Identify all satellites in the CCOR FOV within 11 degrees of the boresight and
-    retrieve their cartesian locations, angular positions from the boresight, distances from
-    CCOR at their respective times:
+    Using the observation time, calculate the Sun's barycentric ICRS coordinate position
+    relative to Earth. We are effectively casting the Sun's position into the same reference frame
+    as both our observer and the satelite(s).
     """
-    # Initialize arrays of type object to store lists of varying sizes
-    get_angle_in_fov = []  # angle from instrument/observatory to satellite relative to Sun-CCOR line-of-sight
-    get_dist = []  # distance from satellite to instrument
-    get_sat_id = []  # name of satellite(s) in FOV
-    get_tlabel = []  # time label for the position(s), e.g., date-beg, date-end
-    get_angle_locs = []  # azimuthal and inclination angles for plotting
-    get_sat_pos = []  # satellite locations within the search radius
-    get_sat_collection = []
+    sun_vector_gcrs = get_body("sun", time=obstime).cartesian.xyz.to(u.km).value
+    sun_vector_hpc = np.array([0, 0, 0])  # heliocentric, the sun is at the origin
+    return GetSunPosition(
+        sun_vector_gcrs=sun_vector_gcrs,
+        sun_vector_hpc=sun_vector_hpc,
+    )
 
-    # Iterate over all 3 timestamps in CCOR file:
-    for tidx in np.arange(all_sat_names.shape[0]):
-        # Initialize lists to write to array objects for each time
-        get_close_points = []
-        get_close_ids = []
-        valid_angles = []
-        valid_ids = []
-        valid_tlabel = []
-        valid_dists = []
-        valid_angle_locs = []
-        valid_sat_pos = []
 
-        # Get the CCOR, SUN, and [optional] GOES19 positions
-        ccor_coord = all_ccor_coords[tidx]
-        sun_coord = all_sun_coords[tidx]
+def get_observer(
+    header: Header,
+    obstime: astroTime,
+    satellite: EarthSatellite,
+    coordinate_frame: SkyCoord,
+    observer_coordinate: SkyCoord,
+    ts: Timescale,
+    use_tle: bool = True,
+) -> GetObserverPosition:
+    """
+    Get the observer position at the observation time in an ICRS coordinate system relative to Earth. This can be done
+    two ways:
+       1. Metadata: Use the header ephemeris vector position to define the observer ICRS coordinate.
+       2. TLE: Using the same TLE, one can also retrieve the EarthSatellite object for the observer and use that
+               to define it's position relative to other satllites. This is preferred as there is less of a chance
+               for introducing timing offsets since this is coming from a consistent data source.
+    """
+    if not use_tle:
+        # Use the metadata - this is prone to error given timing offsets bewteen the report position and
+        # those in the TLE. This is used in place of using an OBSGEO coordinate in case such coordinates do not exist.
+        try:
+            # Earth's position is needed if we are using our EPHVEC EME2000 coordinate vector
+            # to construct the observer position in GCRS.
+            earth_barycentric = SkyCoord(
+                CartesianRepresentation(get_body_barycentric("earth", obstime)), frame="icrs", obstime=obstime
+            ).cartesian.xyz.to(u.km)
+            # Observer ephemeris vector in EME2000 coords
+            ephvec_x = header["EPHVEC_X"] * u.m  # Example EPHVEC X coordinate
+            ephvec_y = header["EPHVEC_Y"] * u.m  # Example EPHVEC Y coordinate
+            ephvec_z = header["EPHVEC_Z"] * u.m  # Example EPHVEC Z coordinate
+            observer_gcrs = SkyCoord(
+                x=ephvec_x, y=ephvec_y, z=ephvec_z, frame="itrs", obstime=obstime, representation_type="cartesian"
+            ).transform_to(ICRS())
+            # Get the GCRS/ICRS position; need logic to handle signage for when observer is on other side of earth.
+            obs_vector_gcrs = earth_barycentric.value - observer_gcrs.cartesian.xyz.to(u.km).value
+        except KeyError:
+            try:
+                # Use the predefined OBSGEO coordinates instead
+                obsgeo_x = header["OBSGEO-X"]  # m
+                obsgeo_y = header["OBSGEO-Y"]  # m
+                obsgeo_z = header["OBSGEO-Z"]  # m
+                obs_vector_gcrs = np.array([obsgeo_x, obsgeo_y, obsgeo_z])
+            except KeyError:
+                raise ValueError(
+                    "No such metadata for OBSGEO coordinates - suggest using TLE data instead and trying again."
+                )
+        # Define the observer coordinate in units km from the obserer coordinate in the metaddata
+        obs_coord_helio = observer_coordinate.cartesian.xyz.to(u.km).value
+    else:
+        # Use of the TLE is more reliable as we are certain to capture passing/neighboring satellites at the same times.
+        # For the position from the TLE, want to use the lagged time--this will require more rigorous testing
+        obs_geo = satellite.at(ts.from_astropy(obstime))
+        obs_vector_gcrs = obs_geo.position.km
+        # Now get the ITRS position
+        obs_vector_itrs = obs_geo.frame_xyz(itrs).km
+        # Define the heliocentric coordinate of the ITRS position vector.
+        obs_coord_helio = (
+            SkyCoord(CartesianRepresentation(obs_vector_itrs * u.km), frame="itrs", obstime=obstime)
+            .transform_to(coordinate_frame)
+            .cartesian.xyz.value
+        )
 
-        ccor_x = ccor_coord[0]
-        ccor_y = ccor_coord[1]
-        ccor_z = ccor_coord[2]
+    return GetObserverPosition(
+        obs_vector_gcrs=obs_vector_gcrs,
+        obs_vector_hpc=obs_coord_helio,
+    )
 
-        sunx = sun_coord[0]
-        suny = sun_coord[1]
-        sunz = sun_coord[2]
 
-        # Iterate over the satellites for each time
-        for id, ss, sat_pos in zip(all_sat_names[tidx], all_sat_coords[tidx], all_sat_pos[tidx]):
-            # Don't look at GOES-19 since CCOR is onboard GOES 19
-            if id == "GOES 19":
-                continue
+def get_sat_angle_errors(
+    sat_angle: float,
+    sat_az: float,
+    factor: int | float,
+    wcs: WCS,
+    adjust_by: int | float = 1,
+    increment: int | float = 0.5,
+) -> SatErrors:
+    """
+    Calculate the error bars associated with an angular offset of adjust_by relative to the
+    projected satellite position. 1 degree offset means different things in relation to the
+    distance of the satellite to the observer.
 
-            # Get the satellite positions
-            s = ss.cartesian.xyz.to(u.km).to_value()
-            xrel = s[0]
-            yrel = s[1]
-            zrel = s[2]
-            # Search over valid radius box
-            if (
-                (np.abs(xrel - ccor_x) < radius_search)
-                & (np.abs(yrel - ccor_y) < radius_search)
-                & (np.abs(zrel - ccor_z) < radius_search)
-            ):
-                # Shouldn't be an issue, but if NOT GOES-19, then proceed
-                if "GOES 19" not in id:
-                    # Get the distance from ccor to the satellite
-                    spos = np.sqrt((ccor_x - xrel) ** 2.0 + (ccor_y - yrel) ** 2.0 + (ccor_z - zrel) ** 2.0)
-                    # Get distance from satellite to sun
-                    spos_srel = np.sqrt(  # noqa: F841
-                        ((xrel - ccor_x) - (sunx - ccor_x)) ** 2.0
-                        + ((yrel - ccor_y) - (suny - ccor_y)) ** 2.0
-                        + ((zrel - ccor_z) - (sunz - ccor_z)) ** 2.0
-                    )
+    A closer satellite < 300 km from the observer will have a streak that spans a larger spatial footprint
+    thank one that is much further away ~1000 km. As a result, a 1 degree error means a small offset for closer
+    objects than further objects allowing for one to further deduce which satellite corresponds to an
+    optical streak-like artifcat (reflection or actual position depending on orientation of observer to
+    Earth's ecliptic (GEO only)
+    """
+    xpix_error = []
+    ypix_error = []
+    adjustments = np.arange(-adjust_by, adjust_by + 0.1, increment)
+    for adjust in adjustments:
+        # Calculate the HPC error
+        sat_angle_error = sat_angle + adjust
+        Tx_error = (sat_angle_error * np.sin(np.deg2rad(sat_az))) * u.deg
+        Ty_error = (sat_angle_error * np.cos(np.deg2rad(sat_az))) * u.deg
+        # Esimate the pixel offsets:
+        hpc_error_coords = np.array([[factor * Tx_error.value, factor * Ty_error.value]]) * u.deg
+        sat_pix_error = wcs.all_world2pix(hpc_error_coords, 0)
+        xpix_error.append(sat_pix_error[0][0])
+        ypix_error.append(sat_pix_error[0][1])
 
-                    # Get the satellite angle relative to the sun center
-                    sat_angle = get_angle(
-                        np.array([xrel, yrel, zrel]), np.array([ccor_x, ccor_y, ccor_z]), np.array([sunx, suny, sunz])
-                    )
-
-                    angular_locs = get_angular_positions(
-                        np.array([xrel, yrel, zrel]),
-                        np.array([ccor_x, ccor_y, ccor_z]),
-                        np.array([sunx, suny, sunz]),
-                    )
-
-                    # Get all satellite locations in the radius box
-                    get_close_points.append(((xrel - ccor_x), (yrel - ccor_y), (zrel - ccor_z)))
-                    get_close_ids.append(id)
-
-                    # Check if satellite is within boresight FOV:
-                    if (sat_angle) <= fov_angle / 2:
-                        # Correct for yaw flip:
-                        valid_angles.append(sat_angle)
-                        # valid_locs.append(locs)
-                        valid_ids.append(id)
-                        valid_dists.append(spos)
-                        valid_tlabel.append(tlabels[tidx])
-                        valid_angle_locs.append((angular_locs[0].tolist(), angular_locs[1].tolist()))
-                        valid_sat_pos.append(sat_pos)
-                        logger.info(
-                            f"{id} has a SAT_ANGLE of {sat_angle} from the boresight | Angular Locations (x, y):"
-                            + f" {angular_locs} | Distance from CCOR is {spos} km."
-                        )
-
-        # Store in lists
-        get_angle_in_fov.append(valid_angles)
-        get_dist.append(valid_dists)
-        get_sat_id.append(valid_ids)
-        get_tlabel.append(valid_tlabel)
-        get_angle_locs.append(valid_angle_locs)
-        get_sat_collection.append(get_close_points)
-        get_sat_pos.append(valid_sat_pos)
-
-    return GetCandidateSatellites(
-        get_angle_in_fov=get_angle_in_fov,
-        get_dist=get_dist,
-        get_sat_id=get_sat_id,
-        get_tlabel=get_tlabel,
-        get_angle_locs=get_angle_locs,
-        get_sat_collection=get_sat_collection,
-        get_sat_pos=get_sat_pos,
+    return SatErrors(
+        xpix_error=xpix_error,
+        ypix_error=ypix_error,
     )
 
 
