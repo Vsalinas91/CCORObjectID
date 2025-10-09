@@ -142,8 +142,8 @@ def angle_to_helioprojective(sat_angle: float, sat_az: float) -> GetSatelliteHel
     Note: sat_angle in degrees
           sat_az in radians.
     """
-    Tx = (sat_angle) * np.sin(sat_az)
-    Ty = (sat_angle) * np.cos(sat_az)
+    Tx = (sat_angle) * np.sin(np.deg2rad(sat_az))
+    Ty = (sat_angle) * np.cos(np.deg2rad(sat_az))
 
     return GetSatelliteHelioprojective(
         Tx=Tx,
