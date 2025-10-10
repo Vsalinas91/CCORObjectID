@@ -184,7 +184,7 @@ def determine_position_signage(
     # De-rotate to align with unrotated image
     xproj_dr, yproj_dr = rotate_point((xproj, yproj), (0, 0), -np.deg2rad(crota))
     # Check for yawflip:
-    yaw_correction = 1 if yawflip == 0 else -1
+    yaw_correction = -1 if yawflip == 0 else 1
 
     # Define initial factors
     factor_x = 1
