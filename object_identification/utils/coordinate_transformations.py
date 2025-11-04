@@ -77,6 +77,7 @@ def get_comet_locations(
     observer: VectorFunction,
     observation_time: int | float,
     wcs: WCS,
+    which: str = "select",
 ) -> CometLocations:
     """
     Get the comet pixel locations relative to CCOR's WCS and observation time.
@@ -93,19 +94,26 @@ def get_comet_locations(
     for body in comets["designation"]:
         # Get the data for each comet and define it's orbit
         comet_row = comets.loc[body]
-        orbit = sun + mpc.comet_orbit(comet_row, ts, GM_SUN)
+        # Calculate the comet orbit - skip over comets with bad ephemeris if needed:
+        try:
+            orbit = sun + mpc.comet_orbit(comet_row, ts, GM_SUN)
+        except ValueError:
+            logger.error(f"Bad/incomplete ephemeris data for comet: {body}...skipping comet.")
         # Get the position relative to the observer
         comet_position = observer.at(observation_time).observe(orbit)
         comet_ra, comet_dec, distance = comet_position.radec()
         # Get the comet position
         comet_x, comet_y = wcs.all_world2pix(comet_ra.degrees, comet_dec.degrees, 1)  # 1 for origin at 1
+        if which == "all":
+            comet_x /= 2
+            comet_y /= 2
         # Make sure it's withing the FOV bounds:
         if (
             (comet_x <= image_shape[1])
             & (comet_x > 0)
             & (comet_y <= image_shape[0])
             & (comet_y > 0)
-            & (distance.au < 1)
+            & (distance.au < 3)
         ):
             logger.info(f"COMET: {body} within FOV.")
             get_comet.append(body)

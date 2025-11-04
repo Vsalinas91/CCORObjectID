@@ -2,6 +2,7 @@ import os
 import logging
 from typing import Any
 import numpy.typing as npt
+import numpy as np
 from pathlib import Path
 import pandas as pd
 
@@ -81,13 +82,24 @@ def subset_star_data(
     return GetStarsSubset(stars_x=good_sx_sub, stars_y=good_sy_sub, markers=good_markers_sub, stars_ids=good_star_ids)
 
 
-def load_comet_data() -> pd.DataFrame | None:
+def load_comet_data(which="all") -> pd.DataFrame | None:
     """
     Load the comet data.
     """
     try:
-        with load.open(os.path.join(CURRENT_DIR, "static_required/CometEls.txt")) as f:
+        if which == "all":
+            file_path = "static_required/AllCometEls.txt"
+        else:
+            file_path = "static_required/CometEls.txt"
+        with load.open(os.path.join(CURRENT_DIR, file_path)) as f:
             comets = mpc.load_comets_dataframe(f)
+            comets = comets.dropna()
+            # QC AllCometEls if which=='all':
+            if which == "all":
+                # Now convert the following columns to the expected int64 dtype
+                for col in ["perihelion_year", "perihelion_month"]:
+                    if col in comets.columns:
+                        comets[col] = comets[col].astype(np.int64)
             # Resort the dataframe:
             return (
                 comets.sort_values("reference")
