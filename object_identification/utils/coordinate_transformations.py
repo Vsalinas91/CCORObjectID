@@ -93,7 +93,11 @@ def get_comet_locations(
     for body in comets["designation"]:
         # Get the data for each comet and define it's orbit
         comet_row = comets.loc[body]
-        orbit = sun + mpc.comet_orbit(comet_row, ts, GM_SUN)
+        # Calculate the comet orbit - skip over comets with bad ephemeris if needed:
+        try:
+            orbit = sun + mpc.comet_orbit(comet_row, ts, GM_SUN)
+        except ValueError:
+            logger.error(f"Bad/incomplete ephemeris data for comet: {body}...skipping comet.")
         # Get the position relative to the observer
         comet_position = observer.at(observation_time).observe(orbit)
         comet_ra, comet_dec, distance = comet_position.radec()
