@@ -53,7 +53,7 @@ def run_alg(inputs: list[Any], generate_figures: bool = False, write_output_file
     earth = reference_bodies.earth
     sun = reference_bodies.sun
     stars = load_star_data()
-    comets = load_comet_data()
+    comets = load_comet_data(which="all")
     s_id: npt.NDArray[Any] = np.array(stars.index)
 
     # Format stars dataframe and define filter for getting only brightest stars:
