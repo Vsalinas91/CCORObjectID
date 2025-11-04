@@ -105,7 +105,7 @@ def get_comet_locations(
             & (comet_x > 0)
             & (comet_y <= image_shape[0])
             & (comet_y > 0)
-            & (distance.au < 1)
+            & (distance.au < 3)
         ):
             logger.info(f"COMET: {body} within FOV.")
             get_comet.append(body)
