@@ -97,11 +97,14 @@ def plot_constellations(
             if any(xline > 0) & any(xline <= naxis1) & any(yline > 0) & any(yline <= naxis2 * 2) & (good_points > 0):
                 logger.info(f"CONSTELLATION: {cname} within FOV.")
                 valid_name = cname
+            else:
+                valid_name = None
+
+            if valid_name is not None:
                 (const_lines,) = ax.plot(
                     [xs, xe], [ys, ye], linestyle="-", color=c_colors[c_ind], linewidth=1.5, zorder=-1, alpha=1
                 )
             else:
-                valid_name = None
                 const_lines = None
 
             get_const_name.append(valid_name)
