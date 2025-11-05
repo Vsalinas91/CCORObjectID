@@ -104,9 +104,7 @@ def get_comet_locations(
         comet_ra, comet_dec, distance = comet_position.radec()
         # Get the comet position
         comet_x, comet_y = wcs.all_world2pix(comet_ra.degrees, comet_dec.degrees, 1)  # 1 for origin at 1
-        if which == "all":
-            comet_x /= 2
-            comet_y /= 2
+
         # Make sure it's withing the FOV bounds:
         if (
             (comet_x <= image_shape[1])
