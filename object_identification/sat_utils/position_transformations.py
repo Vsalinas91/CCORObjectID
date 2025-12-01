@@ -16,6 +16,12 @@ class GetSatelliteHelioprojective:
     Ty: float
 
 
+@dataclass(frozen=True, kw_only=True)
+class GetSignedSatelliteHeliprojective:
+    Tx_sign: float
+    Ty_sign: float
+
+
 def get_sat_angle(sat: npt.NDArray[Any], ccor: npt.NDArray[Any], sun: npt.NDArray[Any]) -> float:
     """
     Get the angle between two vectors (2d or 3d), this angle represents the angle
@@ -148,6 +154,50 @@ def angle_to_helioprojective(sat_angle: float, sat_az: float) -> GetSatelliteHel
     return GetSatelliteHelioprojective(
         Tx=Tx,
         Ty=Ty,
+    )
+
+
+def determine_position_signage(
+    Tx: float, Ty: float, xproj: float, yproj: float, crota: float, yawflip: int | float
+) -> GetSignedSatelliteHeliprojective:
+    """
+    Determine where the position of the satellite is relative to the observer-sun line of sight.
+     - First, derotate the projected coordinates to mimic the observer's image prior to accounting for it's
+    rotation relative to Solar North.
+     - Second, if in it's original state (i.e., no yaw flip), do the following:
+
+            IF xproj < 0: factor_x = -1
+            IF yproj < 0: factor_y = -1
+            IF xproj > 0: factor_x = +1
+            IF yproj > 0: factor_y = +1
+
+    for a YAWFLIP=2, refeverse the sign of factor_x and factor_y for the above conditions.
+
+             YAWFLIP=0             |                  x: xproj < 0, yproj > 0
+                                   |                  x': xproj > 0, yproj < 0 (handle accordingly)
+                            x      |
+                        -----------0-----------
+                                   |
+                                   |    x'
+                                   |
+    """
+    # De-rotate to align with unrotated image
+    xproj_dr, yproj_dr = rotate_point((xproj, yproj), (0, 0), -np.deg2rad(crota))
+    # Check for yawflip:
+    yaw_correction = -1 if yawflip == 0 else 1
+
+    # Define initial factors
+    factor_x = 1
+    factor_y = 1
+    # Check if they fall along negative x,y-axes
+    if xproj_dr < 0:
+        factor_x *= -1
+    if yproj_dr < 0:
+        factor_y *= -1
+
+    return GetSignedSatelliteHeliprojective(
+        Tx_sign=(factor_x * Tx) * yaw_correction,
+        Ty_sign=(factor_y * Ty) * yaw_correction,
     )
 
 
