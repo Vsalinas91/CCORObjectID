@@ -31,6 +31,9 @@ def read_input(input: str, ts: Timescale) -> GetData:
     with fits.open(input) as hdul:
         header = hdul[1].header
         data = hdul[1].data
+        if len(data.shape) == 1:
+            header = hdul[0].header
+            data = hdul[0].data
         instrument = header["INSTRUME"]
         if "CCOR" in instrument:
             wcs = WCS(header, key="A")
