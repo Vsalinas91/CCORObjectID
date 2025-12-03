@@ -139,7 +139,14 @@ def run_alg(inputs: list[Any], generate_figures: bool = False, write_output_file
         # FOR PLANETS/MOON:
         # ----------------
         logger.info("Getting planet(s)/moon within FOV.")
-        planet_dict = get_ccor_locations_sunpy(ccor_map=ccor_map, observation_time=observation_time, wcs=wcs)
+        planet_dict = get_ccor_locations_sunpy(
+            ccor_map=ccor_map,
+            observation_time=observation_time,
+            wcs=wcs,
+            instrument=instrument,
+            observer_coord=ccor_map.observer_coordinate,
+            astro_obs_time=observation_time,
+        )
 
         # FOR COMETS:
         # -----------

@@ -57,7 +57,14 @@ def get_ccor_locations(
     return ObjectLocations(s_x=obj_x, s_y=obj_y, object_distance=obj_distance)
 
 
-def get_ccor_locations_sunpy(ccor_map: GenericMap, observation_time: str, wcs: WCS) -> dict[str, tuple[Any, Any]]:
+def get_ccor_locations_sunpy(
+    ccor_map: GenericMap,
+    observation_time: str,
+    wcs: WCS,
+    instrument: str,
+    observer_coord: SkyCoord,
+    astro_obs_time: str,
+) -> dict[str, tuple[Any, Any]]:
     """
     Get the pixel locations for planetary bodies using SunPy's Map object
     """
@@ -71,8 +78,16 @@ def get_ccor_locations_sunpy(ccor_map: GenericMap, observation_time: str, wcs: W
 
     for key in keys:
         body = get_body(key, time=Time(observation_time), location=el)
-        body_skycoord = SkyCoord(body.ra, body.dec, frame="icrs", unit="deg")
-        body_pixel_x, body_pixel_y = wcs.world_to_pixel(body_skycoord)
+        if "CCOR" in instrument:
+            body_skycoord = SkyCoord(body.ra, body.dec, frame="icrs", unit="deg")
+            body_pixel_x, body_pixel_y = wcs.world_to_pixel(body_skycoord)
+        else:
+            body_icrs = SkyCoord(body.ra, body.dec, frame="icrs", unit="deg")
+            hpc_frame = frames.Helioprojective(
+                observer=observer_coord, obstime=Time(astro_obs_time, format="isot", scale="utc")
+            )
+            body_hpc = body_icrs.transform_to(hpc_frame)
+            body_pixel_x, body_pixel_y = wcs.world_to_pixel(body_hpc)
         if (
             (body_pixel_x <= image_shape[1])
             & (body_pixel_x > 0)
