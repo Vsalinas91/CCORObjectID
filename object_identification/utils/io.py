@@ -11,6 +11,7 @@ from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.time import Time
 from sunpy import map as smap
+from sunpy.util.metadata import MetaDict
 from skyfield.timelib import Timescale
 
 from .utils_dataclasses import GetData
@@ -30,14 +31,41 @@ def read_input(input: str, ts: Timescale) -> GetData:
     with fits.open(input) as hdul:
         header = hdul[1].header
         data = hdul[1].data
-        wcs = WCS(header, key="A")
-        ccor_map = smap.Map(data, header, key="A")
-        obs_time = header["DATE-OBS"]
-        end_time = header["DATE-END"]
-        time = ts.from_astropy(Time(obs_time))
+        instrument = header["INSTRUME"]
+        if "CCOR" in instrument:
+            wcs = WCS(header, key="A")
+            ccor_map = smap.Map(data, header, key="A")
+            obs_time = header["DATE-OBS"]
+            end_time = header["DATE-END"]
+            time = ts.from_astropy(Time(obs_time))
+        else:
+            # Modify the header for pre-fitted and corrected LASCO C3 data
+            header["CUNIT1"] = "deg"
+            header["CUNIT2"] = "deg"
+            header["DATE-BEG"] = header["DATE-OBS"]
+            header["BUNIT"] = "DN"
+            # Remove CROTA
+            header.pop("CROTA1", None)
+            header.pop("CROTA2", None)
+            # Make a new header object:
+            header_dict = MetaDict(header)
+            wcs = WCS(header)
+            ccor_map = smap.Map(data, header_dict)
+            obs_time = header["DATE-OBS"]
+            # define our own date_end using the exposure time
+            end_time_dt = datetime.datetime.fromisoformat(obs_time) + datetime.timedelta(seconds=header["EXPTIME"])
+            end_time = datetime.datetime.isoformat(end_time_dt)
+            time = ts.from_astropy(Time(obs_time))
 
     return GetData(
-        image_data=data, header=header, WCS=wcs, ccor_map=ccor_map, time=time, obs_time=obs_time, end_time=end_time
+        image_data=data,
+        header=header,
+        WCS=wcs,
+        ccor_map=ccor_map,
+        time=time,
+        obs_time=obs_time,
+        end_time=end_time,
+        instrument=instrument,
     )
 
 
