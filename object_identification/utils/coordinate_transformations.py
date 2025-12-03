@@ -9,6 +9,8 @@ import astropy.units as u
 from astropy.time import Time
 from astropy.wcs.wcs import WCS
 from sunpy.map.mapbase import GenericMap
+from sunpy.coordinates import frames
+
 
 from skyfield.constants import GM_SUN_Pitjeva_2005_km3_s2 as GM_SUN
 from skyfield.data import mpc
@@ -24,7 +26,13 @@ logger = logging.getLogger(__name__)
 
 
 def get_ccor_locations(
-    observer: VectorFunction, observation_time: str, wcs: WCS, objects: npt.NDArray[Any]
+    observer: VectorFunction,
+    observation_time: str,
+    wcs: WCS,
+    objects: npt.NDArray[Any],
+    instrument: str,
+    observer_coord: SkyCoord,
+    astro_obs_time: str,
 ) -> ObjectLocations:
     """
     Get the pixel locations of the objects relative to CCOR's
@@ -34,7 +42,18 @@ def get_ccor_locations(
     object_positions = observer.at(observation_time).observe(objects)
     # Get the angular positions for converting to the WCS CCOR pixel world
     obj_ra, obj_dec, obj_distance = object_positions.radec()
-    obj_x, obj_y = wcs.all_world2pix(obj_ra.degrees, obj_dec.degrees, 1)  # 1 for origin at 1
+    if "CCOR" in instrument:
+        obj_x, obj_y = wcs.all_world2pix(obj_ra.degrees, obj_dec.degrees, 1)  # 1 for origin at 1
+    else:
+        # create a SkyCoord object
+        obj_icrs = SkyCoord(ra=obj_ra.to(u.deg), dec=obj_dec.to(u.deg), distance=obj_distance.to(u.au), frame="icrs")
+        hpc_frame = frames.Helioprojective(
+            observer=observer_coord, obstime=Time(astro_obs_time, format="isot", scale="utc")
+        )
+        obj_hpc = obj_icrs.transform_to(hpc_frame)
+        obj_lon = obj_hpc.Tx.to(u.deg).value
+        obj_lat = obj_hpc.Ty.to(u.deg).value
+        obj_x, obj_y = wcs.all_world2pix(obj_lon, obj_lat, 1)
     return ObjectLocations(s_x=obj_x, s_y=obj_y, object_distance=obj_distance)
 
 

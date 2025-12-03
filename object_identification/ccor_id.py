@@ -93,6 +93,7 @@ def run_alg(inputs: list[Any], generate_figures: bool = False, write_output_file
         observation_time = get_input_data.obs_time
         end_time = get_input_data.end_time
         image_dims = wcs.array_shape
+        instrument = get_input_data.instrument
         logger.info(f"Identifying objects for observing time: {observation_time}")
 
         # Define the observer (approximate from GEO location for G19 if observer_geo is not set.):
@@ -110,7 +111,9 @@ def run_alg(inputs: list[Any], generate_figures: bool = False, write_output_file
         # FOR STARS:
         # -----------
         logger.info("Getting star data from Hipparcos catalogue.")
-        star_locations = get_ccor_locations(observer, t, wcs, star_data)
+        star_locations = get_ccor_locations(
+            observer, t, wcs, star_data, instrument, ccor_map.observer_coordinate, observation_time
+        )
         # All stars
         s_x = star_locations.s_x
         s_y = star_locations.s_y
