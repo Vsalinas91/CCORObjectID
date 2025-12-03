@@ -159,7 +159,7 @@ def run_alg(inputs: list[Any], generate_figures: bool = False, write_output_file
             observation_time=t,
             wcs=wcs,
             instrument=instrument,
-            observer_coordinate=ccor_map.observer_coordinates,
+            observer_coordinate=ccor_map.observer_coordinate,
             astro_date_obs=observation_time,
             which="all",
         )
