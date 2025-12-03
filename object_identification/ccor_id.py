@@ -152,7 +152,16 @@ def run_alg(inputs: list[Any], generate_figures: bool = False, write_output_file
         # -----------
         logger.info("Getting comet(s) within FOV.")
         get_comets = get_comet_locations(
-            comets=comets, sun=sun, ts=ts, observer=observer, observation_time=t, wcs=wcs, which="all"
+            comets=comets,
+            sun=sun,
+            ts=ts,
+            observer=observer,
+            observation_time=t,
+            wcs=wcs,
+            instrument=instrument,
+            observer_coordinate=ccor_map.observer_coordinates,
+            astro_date_obs=observation_time,
+            which="all",
         )
         get_comet = get_comets.get_comet
         valid_pixels = get_comets.valid_pixels

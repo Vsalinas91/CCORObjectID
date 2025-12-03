@@ -111,6 +111,9 @@ def get_comet_locations(
     observer: VectorFunction,
     observation_time: int | float,
     wcs: WCS,
+    instrument: str,
+    observer_coordinate: SkyCoord,
+    astro_date_obs: str,
     which: str = "select",
 ) -> CometLocations:
     """
@@ -137,7 +140,21 @@ def get_comet_locations(
         comet_position = observer.at(observation_time).observe(orbit)
         comet_ra, comet_dec, distance = comet_position.radec()
         # Get the comet position
-        comet_x, comet_y = wcs.all_world2pix(comet_ra.degrees, comet_dec.degrees, 1)  # 1 for origin at 1
+        if "CCOR" in instrument:
+            comet_x, comet_y = wcs.all_world2pix(comet_ra.degrees, comet_dec.degrees, 1)  # 1 for origin at 1
+        else:
+            comet_icrs = SkyCoord(
+                ra=comet_ra.to(u.deg), dec=comet_dec.to(u.deg), distance=distance.to(u.au), frame="icrs"
+            )
+            helioprojective_frame = frames.Helioprojective(
+                observer=observer_coordinate, obstime=Time(astro_date_obs, format="isot", scale="utc")
+            )
+            comet_hpc = comet_icrs.transform_to(helioprojective_frame)
+
+            lon_degrees = comet_hpc.Tx.to(u.deg).value
+            lat_degrees = comet_hpc.Ty.to(u.deg).value
+
+            comet_x, comet_y = wcs.all_world2pix(lon_degrees, lat_degrees, 1)  # 1 for origin at 1
 
         # Make sure it's withing the FOV bounds:
         if (
