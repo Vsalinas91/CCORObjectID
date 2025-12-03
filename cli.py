@@ -34,6 +34,8 @@ if __name__ == "__main__":
     # Stack Images:
     if os.path.exists(input_dir):
         files = sorted(glob.glob(input_dir + "*.fits"))[:]
+        if len(files) < 1:
+            files = sorted(glob.glob(input_dir + "*.fts"))[:]
         if tle is None:
             logger.info(f"Running object identification for: {len(files)} image frames.")
             # Run the alg

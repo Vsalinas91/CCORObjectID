@@ -9,6 +9,8 @@ import astropy.units as u
 from astropy.time import Time
 from astropy.wcs.wcs import WCS
 from sunpy.map.mapbase import GenericMap
+from sunpy.coordinates import frames
+
 
 from skyfield.constants import GM_SUN_Pitjeva_2005_km3_s2 as GM_SUN
 from skyfield.data import mpc
@@ -24,7 +26,13 @@ logger = logging.getLogger(__name__)
 
 
 def get_ccor_locations(
-    observer: VectorFunction, observation_time: str, wcs: WCS, objects: npt.NDArray[Any]
+    observer: VectorFunction,
+    observation_time: str,
+    wcs: WCS,
+    objects: npt.NDArray[Any],
+    instrument: str,
+    observer_coord: SkyCoord,
+    astro_obs_time: str,
 ) -> ObjectLocations:
     """
     Get the pixel locations of the objects relative to CCOR's
@@ -34,11 +42,29 @@ def get_ccor_locations(
     object_positions = observer.at(observation_time).observe(objects)
     # Get the angular positions for converting to the WCS CCOR pixel world
     obj_ra, obj_dec, obj_distance = object_positions.radec()
-    obj_x, obj_y = wcs.all_world2pix(obj_ra.degrees, obj_dec.degrees, 1)  # 1 for origin at 1
+    if "CCOR" in instrument:
+        obj_x, obj_y = wcs.all_world2pix(obj_ra.degrees, obj_dec.degrees, 1)  # 1 for origin at 1
+    else:
+        # create a SkyCoord object
+        obj_icrs = SkyCoord(ra=obj_ra.to(u.deg), dec=obj_dec.to(u.deg), distance=obj_distance.to(u.au), frame="icrs")
+        hpc_frame = frames.Helioprojective(
+            observer=observer_coord, obstime=Time(astro_obs_time, format="isot", scale="utc")
+        )
+        obj_hpc = obj_icrs.transform_to(hpc_frame)
+        obj_lon = obj_hpc.Tx.to(u.deg).value
+        obj_lat = obj_hpc.Ty.to(u.deg).value
+        obj_x, obj_y = wcs.all_world2pix(obj_lon, obj_lat, 1)
     return ObjectLocations(s_x=obj_x, s_y=obj_y, object_distance=obj_distance)
 
 
-def get_ccor_locations_sunpy(ccor_map: GenericMap, observation_time: str, wcs: WCS) -> dict[str, tuple[Any, Any]]:
+def get_ccor_locations_sunpy(
+    ccor_map: GenericMap,
+    observation_time: str,
+    wcs: WCS,
+    instrument: str,
+    observer_coord: SkyCoord,
+    astro_obs_time: str,
+) -> dict[str, tuple[Any, Any]]:
     """
     Get the pixel locations for planetary bodies using SunPy's Map object
     """
@@ -52,8 +78,16 @@ def get_ccor_locations_sunpy(ccor_map: GenericMap, observation_time: str, wcs: W
 
     for key in keys:
         body = get_body(key, time=Time(observation_time), location=el)
-        body_skycoord = SkyCoord(body.ra, body.dec, frame="icrs", unit="deg")
-        body_pixel_x, body_pixel_y = wcs.world_to_pixel(body_skycoord)
+        if "CCOR" in instrument:
+            body_skycoord = SkyCoord(body.ra, body.dec, frame="icrs", unit="deg")
+            body_pixel_x, body_pixel_y = wcs.world_to_pixel(body_skycoord)
+        else:
+            body_icrs = SkyCoord(body.ra, body.dec, frame="icrs", unit="deg")
+            hpc_frame = frames.Helioprojective(
+                observer=observer_coord, obstime=Time(astro_obs_time, format="isot", scale="utc")
+            )
+            body_hpc = body_icrs.transform_to(hpc_frame)
+            body_pixel_x, body_pixel_y = wcs.world_to_pixel(body_hpc)
         if (
             (body_pixel_x <= image_shape[1])
             & (body_pixel_x > 0)
@@ -77,6 +111,9 @@ def get_comet_locations(
     observer: VectorFunction,
     observation_time: int | float,
     wcs: WCS,
+    instrument: str,
+    observer_coordinate: SkyCoord,
+    astro_date_obs: str,
     which: str = "select",
 ) -> CometLocations:
     """
@@ -103,7 +140,21 @@ def get_comet_locations(
         comet_position = observer.at(observation_time).observe(orbit)
         comet_ra, comet_dec, distance = comet_position.radec()
         # Get the comet position
-        comet_x, comet_y = wcs.all_world2pix(comet_ra.degrees, comet_dec.degrees, 1)  # 1 for origin at 1
+        if "CCOR" in instrument:
+            comet_x, comet_y = wcs.all_world2pix(comet_ra.degrees, comet_dec.degrees, 1)  # 1 for origin at 1
+        else:
+            comet_icrs = SkyCoord(
+                ra=comet_ra.to(u.deg), dec=comet_dec.to(u.deg), distance=distance.to(u.au), frame="icrs"
+            )
+            helioprojective_frame = frames.Helioprojective(
+                observer=observer_coordinate, obstime=Time(astro_date_obs, format="isot", scale="utc")
+            )
+            comet_hpc = comet_icrs.transform_to(helioprojective_frame)
+
+            lon_degrees = comet_hpc.Tx.to(u.deg).value
+            lat_degrees = comet_hpc.Ty.to(u.deg).value
+
+            comet_x, comet_y = wcs.all_world2pix(lon_degrees, lat_degrees, 1)  # 1 for origin at 1
 
         # Make sure it's withing the FOV bounds:
         if (

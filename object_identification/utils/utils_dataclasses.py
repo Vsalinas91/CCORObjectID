@@ -21,6 +21,7 @@ class GetData:
     time: Timescale
     obs_time: str
     end_time: str
+    instrument: str
 
 
 # DATA RETRIEVAL:

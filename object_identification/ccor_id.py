@@ -93,6 +93,7 @@ def run_alg(inputs: list[Any], generate_figures: bool = False, write_output_file
         observation_time = get_input_data.obs_time
         end_time = get_input_data.end_time
         image_dims = wcs.array_shape
+        instrument = get_input_data.instrument
         logger.info(f"Identifying objects for observing time: {observation_time}")
 
         # Define the observer (approximate from GEO location for G19 if observer_geo is not set.):
@@ -110,7 +111,9 @@ def run_alg(inputs: list[Any], generate_figures: bool = False, write_output_file
         # FOR STARS:
         # -----------
         logger.info("Getting star data from Hipparcos catalogue.")
-        star_locations = get_ccor_locations(observer, t, wcs, star_data)
+        star_locations = get_ccor_locations(
+            observer, t, wcs, star_data, instrument, ccor_map.observer_coordinate, observation_time
+        )
         # All stars
         s_x = star_locations.s_x
         s_y = star_locations.s_y
@@ -136,13 +139,29 @@ def run_alg(inputs: list[Any], generate_figures: bool = False, write_output_file
         # FOR PLANETS/MOON:
         # ----------------
         logger.info("Getting planet(s)/moon within FOV.")
-        planet_dict = get_ccor_locations_sunpy(ccor_map=ccor_map, observation_time=observation_time, wcs=wcs)
+        planet_dict = get_ccor_locations_sunpy(
+            ccor_map=ccor_map,
+            observation_time=observation_time,
+            wcs=wcs,
+            instrument=instrument,
+            observer_coord=ccor_map.observer_coordinate,
+            astro_obs_time=observation_time,
+        )
 
         # FOR COMETS:
         # -----------
         logger.info("Getting comet(s) within FOV.")
         get_comets = get_comet_locations(
-            comets=comets, sun=sun, ts=ts, observer=observer, observation_time=t, wcs=wcs, which="all"
+            comets=comets,
+            sun=sun,
+            ts=ts,
+            observer=observer,
+            observation_time=t,
+            wcs=wcs,
+            instrument=instrument,
+            observer_coordinate=ccor_map.observer_coordinate,
+            astro_date_obs=observation_time,
+            which="all",
         )
         get_comet = get_comets.get_comet
         valid_pixels = get_comets.valid_pixels
@@ -169,7 +188,7 @@ def run_alg(inputs: list[Any], generate_figures: bool = False, write_output_file
         if write_output_files:
             try:
                 logger.info("Writing to file.")
-                write_output(observation_time, end_time, combined_dict)
+                write_output(observation_time, end_time, combined_dict, instrument)
             except CCORExitError:
                 logger.exception("Cannot produce output file.")
 

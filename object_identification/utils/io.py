@@ -11,6 +11,7 @@ from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.time import Time
 from sunpy import map as smap
+from sunpy.util.metadata import MetaDict
 from skyfield.timelib import Timescale
 
 from .utils_dataclasses import GetData
@@ -30,25 +31,55 @@ def read_input(input: str, ts: Timescale) -> GetData:
     with fits.open(input) as hdul:
         header = hdul[1].header
         data = hdul[1].data
-        wcs = WCS(header, key="A")
-        ccor_map = smap.Map(data, header, key="A")
-        obs_time = header["DATE-OBS"]
-        end_time = header["DATE-END"]
-        time = ts.from_astropy(Time(obs_time))
+        if len(data.shape) == 1:
+            header = hdul[0].header
+            data = hdul[0].data
+        instrument = header["INSTRUME"]
+        if "CCOR" in instrument:
+            wcs = WCS(header, key="A")
+            ccor_map = smap.Map(data, header, key="A")
+            obs_time = header["DATE-OBS"]
+            end_time = header["DATE-END"]
+            time = ts.from_astropy(Time(obs_time))
+        else:
+            # Modify the header for pre-fitted and corrected LASCO C3 data
+            header["CUNIT1"] = "deg"
+            header["CUNIT2"] = "deg"
+            header["DATE-BEG"] = header["DATE-OBS"]
+            header["BUNIT"] = "DN"
+            # Remove CROTA
+            header.pop("CROTA1", None)
+            header.pop("CROTA2", None)
+            # Make a new header object:
+            header_dict = MetaDict(header)
+            wcs = WCS(header)
+            ccor_map = smap.Map(data, header_dict)
+            obs_time = header["DATE-OBS"]
+            # define our own date_end using the exposure time
+            end_time_dt = datetime.datetime.fromisoformat(obs_time) + datetime.timedelta(seconds=header["EXPTIME"])
+            end_time = datetime.datetime.isoformat(end_time_dt)
+            time = ts.from_astropy(Time(obs_time))
 
     return GetData(
-        image_data=data, header=header, WCS=wcs, ccor_map=ccor_map, time=time, obs_time=obs_time, end_time=end_time
+        image_data=data,
+        header=header,
+        WCS=wcs,
+        ccor_map=ccor_map,
+        time=time,
+        obs_time=obs_time,
+        end_time=end_time,
+        instrument=instrument,
     )
 
 
-def write_output(obs_time: str, end_time: str, data_dict: dict[str, Any]) -> None:
+def write_output(obs_time: str, end_time: str, data_dict: dict[str, Any], instrument: str) -> None:
     """
     write out the data to a file that matches the data product cadence timestamp.
     """
     obs_time_fmt = obs_time.replace("-", "").replace(":", "").split(".")[0]
     end_time_fmt = end_time.replace("-", "").replace(":", "").split(".")[0]
     file_tstamp = f"s{obs_time_fmt}Z_e{end_time_fmt}Z"
-    out_dir = f"{obs_time_fmt.split('T')[0]}"
+    out_dir = f"{obs_time_fmt.split('T')[0]}_{instrument}"
     creation = datetime.datetime.now().strftime("p%Y%m%dT%H%M%SZ")
 
     # Create output directory if it does  not exist:
@@ -59,7 +90,9 @@ def write_output(obs_time: str, end_time: str, data_dict: dict[str, Any]) -> Non
 
     try:
         with open(
-            os.path.join(ROOT_DIR.parent, f"outputs/{out_dir}/sci_ccor1-obj_g19_{file_tstamp}_{creation}_pub.json"),
+            os.path.join(
+                ROOT_DIR.parent, f"outputs/{out_dir}/sci_{instrument.lower()}-obj_g19_{file_tstamp}_{creation}_pub.json"
+            ),
             "w",
         ) as data_file:
             json.dump(data_dict, data_file, indent=4)
