@@ -188,7 +188,7 @@ def run_alg(inputs: list[Any], generate_figures: bool = False, write_output_file
         if write_output_files:
             try:
                 logger.info("Writing to file.")
-                write_output(observation_time, end_time, combined_dict)
+                write_output(observation_time, end_time, combined_dict, instrument)
             except CCORExitError:
                 logger.exception("Cannot produce output file.")
 
